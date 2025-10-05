@@ -1,0 +1,8 @@
+Metric,Value
+Total Records,101766.0
+Total Features,51.0
+Numerical Features,14.0
+Categorical Features,37.0
+Missing Values,181168.0
+Duplicate Patients,30248.0
+Readmission <30 days (%),11.159915885462727

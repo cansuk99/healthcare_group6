@@ -1,0 +1,7 @@
+Metric,Value
+Total_Patients,101766
+Numerical_Features,13
+Categorical_Features,37
+Target_Class_0,90409
+Target_Class_1,11357
+Imbalance_Ratio,1:8.0

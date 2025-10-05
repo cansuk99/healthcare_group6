@@ -1,0 +1,6 @@
+Insight
+1. Class imbalance ratio: 1:8.0 - SMOTE recommended
+"2. Top 3 predictive features: number_inpatient, number_emergency, discharge_disposition_id"
+"3. Skewed features requiring transformation: time_in_hospital, num_procedures, num_medications"
+4. Highest readmission risk age group: [20-30)
+5. Highest readmission risk diagnosis: Unknown

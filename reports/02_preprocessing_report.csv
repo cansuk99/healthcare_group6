@@ -1,0 +1,9 @@
+Metric,Value
+Initial_Rows,101766
+Final_Rows,101766
+Rows_Removed,0
+Initial_Columns,50
+Final_Columns,51
+Columns_Dropped,3
+Missing_Values_Imputed,192849
+Final_Missing_Values,0
