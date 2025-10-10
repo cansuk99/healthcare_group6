@@ -223,9 +223,9 @@ df['diab_code'] = df[["diag_1", 'diag_2', "diag_3"]].apply(create_get_value_fn(d
 
 df['diab_type'] = df['diab_code'].map(diab_type_dict.copy()).astype(int)
 
-df['diab_control'] = df['diab_code'].map(diab_control_dict).fillna("unknown").astype(str)
+df['diab_control'] = df['diab_code'].map(diab_control_dict).astype(int)
 
-df['diab_complication_binary'] = df['diab_code'].map(diab_complications_binary_dict).astype(str)
+df['diab_complication_binary'] = df['diab_code'].map(diab_complications_binary_dict).astype(int)
 
 df['diab_complication_categories'] = df['diab_code'].map(diab_complications_categories_dict).astype(str)
 
