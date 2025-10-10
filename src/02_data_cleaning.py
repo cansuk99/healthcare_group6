@@ -294,7 +294,7 @@ if len(remaining_missing) > 0:
                 print(f"    → Imputed with: 'Unknown'")
             else:
                 mode_val = df[col].mode()[0]
-                df[col].fillna(mode_val, inplace=True)
+                df[col] = df[col].fillna(mode_val, inplace=False)
                 print(f"    → Imputed with mode: '{mode_val}'")
     
     print(f"\n✓ All missing values handled")
