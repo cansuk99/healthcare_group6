@@ -6,14 +6,20 @@ This script:
 1. Loads the raw data from Step 1
 2. Handles missing values ('?' indicators)
 3. Maps ICD-9 diagnosis codes to 9 disease categories
-4. Handles duplicate patients (multiple encounters)
-5. Creates binary target variable
-6. Handles outliers and data quality issues
-7. Saves cleaned data for analysis
+4. Maps ICD diabetes diagnoses codes to related information:
+    - 34 diabetes diagnoses descriptions
+    - diabetes type
+    - diabetes control status
+    - diabetes complication (binary and categories)
+5. Handles duplicate patients (multiple encounters)
+6. Creates binary target variable
+7. Handles outliers and data quality issues
+8. Saves cleaned data for analysis
 """
 
 import pandas as pd
 import numpy as np
+import json
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -169,6 +175,63 @@ print("\n✓ ICD-9 mapping complete: 700+ codes → 9 categories per diagnosis")
 
 
 # ============================================================================
+# 4. ICD DIABETES DIAGNOSIS CODE MAPPING
+# ============================================================================
+# codes retrived from https://www.aapc.com/codes/icd9-codes/250.93
+
+print("\n" + "=" * 80)
+print("[3] MAPPING ICD-9 CODES TO DIABETES DESCRIPTIONS")
+print("=" * 80)
+
+def create_get_value_fn(mapping):
+    def get_value(row, default_value:str = "250"):
+        for val in [row['diag_1'], row['diag_2'], row['diag_3']]:
+            if val in list(mapping.keys()):
+                return val
+        return default_value
+    return get_value
+
+# get diabetes diagnosis description based on diagnosis code
+with open('../data/preprocessing-codes-mapping/diabetes_description_based_on_code.json', 'r') as fp:
+    diab_descr_dict = json.load(fp)
+
+# get diabetes type based on diagnosis code
+with open('../data/preprocessing-codes-mapping/diabetes_type_based_on_code.json', 'r') as fp:
+    diab_type_dict = json.load(fp)
+
+# get diabetes control status based on diagnosis code
+# 1: diabetes not stated as uncontrolled
+# 0: diabetes stated as uncontrolled
+diab_control_dict = {key: 1 if "not stated as uncontrolled" in value else 0
+                     for key, value in diab_descr_dict.items()}
+
+# get diabetes complication existence based on diagnosis code
+# 1: there is a complication
+# 0: there is no complication
+diab_complications_binary_dict = {key: 1 if " with " in value else 0
+                                  for key, value in diab_descr_dict.items()}
+
+# get diabetes complication category based on diagnosis code
+# if no complication is mentionned, "None"
+diab_complications_categories_dict = {
+    key: value.split("with")[1].split(", ")[0].strip() if " with " in value else "None"
+    for key, value in diab_descr_dict.items()
+    }
+
+# apply maps for all additionnal features
+df['diab_code'] = df[["diag_1", 'diag_2', "diag_3"]].apply(create_get_value_fn(diab_descr_dict), axis=1)
+
+df['diab_type'] = df['diab_code'].map(diab_type_dict.copy()).astype(int)
+
+df['diab_control'] = df['diab_code'].map(diab_control_dict).astype(int)
+
+df['diab_complication_binary'] = df['diab_code'].map(diab_complications_binary_dict).astype(int)
+
+df['diab_complication_categories'] = df['diab_code'].map(diab_complications_categories_dict).astype(str)
+
+print("\n✓ ICD-diabetes information mapping complete")
+
+# ============================================================================
 # 5. CREATE BINARY TARGET VARIABLE
 # ============================================================================
 
@@ -231,7 +294,7 @@ if len(remaining_missing) > 0:
                 print(f"    → Imputed with: 'Unknown'")
             else:
                 mode_val = df[col].mode()[0]
-                df[col].fillna(mode_val, inplace=True)
+                df[col] = df[col].fillna(mode_val, inplace=False)
                 print(f"    → Imputed with mode: '{mode_val}'")
     
     print(f"\n✓ All missing values handled")
