@@ -192,11 +192,11 @@ def create_get_value_fn(mapping):
     return get_value
 
 # get diabetes diagnosis description based on diagnosis code
-with open('../data/diabetes_description_based_on_code.json', 'r') as fp:
+with open('../data/preprocessing-codes-mapping/diabetes_description_based_on_code.json', 'r') as fp:
     diab_descr_dict = json.load(fp)
 
 # get diabetes type based on diagnosis code
-with open('../data/diabetes_type_based_on_code.json', 'r') as fp:
+with open('../data/preprocessing-codes-mapping/diabetes_type_based_on_code.json', 'r') as fp:
     diab_type_dict = json.load(fp)
 
 # get diabetes control status based on diagnosis code
