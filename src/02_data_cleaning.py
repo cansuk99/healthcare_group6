@@ -281,12 +281,17 @@ if len(remaining_missing) > 0:
         
         print(f"\n  Processing: {col} ({count:,} missing, {pct:.2f}%)")
         
-        # Strategy depends on data type
-        if df[col].dtype in ['int64', 'float64']:
+        if col.startswith('diag_'):
+            # For diagnostic columns: replace '?' with None (already handled above)
+            df[col] = df[col].where(df[col].notna(), None)
+            diag_cols = [c for c in df.columns if c.startswith('diag_')]
+            print('Number of no diagnoses for diag_1, diag_2, diag_3 in total: ', df[diag_cols].isna().sum())
+
+        elif df[col].dtype in ['int64', 'float64']:
             # Numerical: impute with median
             median_val = df[col].median()
             df[col].fillna(median_val, inplace=True)
-            print(f"    → Imputed with median: {median_val}")
+            print(f"    → '{col}' imputed with median: {median_val}")
         else:
             # Categorical: impute with mode or 'Unknown'
             if df[col].mode().empty:
@@ -366,7 +371,6 @@ report_df = pd.DataFrame(list(preprocessing_report.items()),
                          columns=['Metric', 'Value'])
 report_df.to_csv('../reports/02_preprocessing_report.csv', index=False)
 print("✓ Preprocessing report saved as '02_preprocessing_report.csv'")
-
 print("\n" + "="*80)
 print("STEP 2 COMPLETE!")
 print("="*80)
