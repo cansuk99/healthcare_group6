@@ -322,8 +322,17 @@ if len(remaining_missing) > 0:
 else:
     print("\n✓ No remaining missing values")
 
+
 # ============================================================================
-# 8. DATA QUALITY SUMMARY
+# 7. Remove Duplicate Patient Encounters 
+# ============================================================================
+# we need independent variables for our models
+df = df.sort_values(["patient_nbr", "encounter_id"])
+#  Keep only the first encounter per patient 
+df = df.groupby("patient_nbr", as_index=False).first()
+
+# ============================================================================
+# DATA QUALITY SUMMARY
 # ============================================================================
 
 print("\n" + "="*80)
