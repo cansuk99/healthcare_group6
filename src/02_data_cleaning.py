@@ -111,7 +111,7 @@ def map_icd9_to_category(code):
     """
     
     if pd.isna(code):
-        return 'Unknown'
+        return '0'
     
     # Convert to string
     code_str = str(code).strip()
@@ -283,7 +283,7 @@ if len(remaining_missing) > 0:
         
         if col.startswith('diag_'):
             # For diagnostic columns: replace '?' with None (already handled above)
-            df[col] = df[col].where(df[col].notna(), None)
+            df[col] = df[col].where(df[col].notna(), "0")
             diag_cols = [c for c in df.columns if c.startswith('diag_')]
             print('Number of no diagnoses for diag_1, diag_2, diag_3 in total: ', df[diag_cols].isna().sum())
 
