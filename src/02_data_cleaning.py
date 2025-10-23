@@ -11,10 +11,11 @@ This script:
     - diabetes type
     - diabetes control status
     - diabetes complication (binary and categories)
-5. Handles duplicate patients (multiple encounters)
-6. Creates binary target variable
-7. Handles outliers and data quality issues
-8. Saves cleaned data for analysis
+5. Creation of per day features
+6. Handles duplicate patients (multiple encounters)
+7. Creates binary target variable
+8. Handles outliers and data quality issues
+9. Saves cleaned data for analysis
 """
 
 import pandas as pd
@@ -220,8 +221,28 @@ df['diab_complication_categories'] = df['diab_code'].map(diab_complications_cate
 
 print("\n✓ ICD-diabetes information mapping complete")
 
+
 # ============================================================================
-# 5. CREATE BINARY TARGET VARIABLE
+# 5. PER DAY FEATURES
+# ============================================================================
+# Interaction 1: Medications × Time in Hospital
+if 'num_medications' in df.columns and 'time_in_hospital' in df.columns:
+    df['meds_per_day'] = df['num_medications'] / (df['time_in_hospital'].apply(lambda x: max(x, 1)))  # +1 to avoid division by zero
+    print("  ✓ Created: meds_per_day (medications per hospital day)")
+
+# Interaction 2: Procedures × Time in Hospital
+if 'num_procedures' in df.columns and 'time_in_hospital' in df.columns:
+    df['procedures_per_day'] = df['num_procedures'] / (df['time_in_hospital'].apply(lambda x: max(x, 1)))
+    print("  ✓ Created: procedures_per_day")
+
+# Interaction 3: Lab tests × Time in Hospital
+if 'num_lab_procedures' in df.columns and 'time_in_hospital' in df.columns:
+    df['labs_per_day'] = df['num_lab_procedures'] / (df['time_in_hospital'].apply(lambda x: max(x, 1)))
+    print("  ✓ Created: labs_per_day")
+
+
+# ============================================================================
+# 6. CREATE BINARY TARGET VARIABLE
 # ============================================================================
 
 
@@ -248,7 +269,7 @@ if 'readmitted' in df.columns:
         print(f"    → Will need SMOTE or class weighting in modeling phase")
 
 # ============================================================================
-# 6. HANDLE REMAINING MISSING VALUES
+# 7. HANDLE REMAINING MISSING VALUES
 # ============================================================================
 
 
@@ -327,7 +348,7 @@ total_missing = df.isnull().sum().sum()
 print(f"\nFinal missing values: {total_missing}")
 
 # ============================================================================
-# 8. SAVE CLEANED DATA
+# 9. SAVE CLEANED DATA
 # ============================================================================
 
 

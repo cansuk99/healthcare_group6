@@ -55,21 +55,6 @@ print("="*80)
 
 print("\n[2.1] Creating clinically meaningful interactions...")
 
-# Interaction 1: Medications × Time in Hospital
-if 'num_medications' in df.columns and 'time_in_hospital' in df.columns:
-    df['meds_per_day'] = df['num_medications'] / (df['time_in_hospital'] + 1)  # +1 to avoid division by zero
-    print("  ✓ Created: meds_per_day (medications per hospital day)")
-
-# Interaction 2: Procedures × Time in Hospital
-if 'num_procedures' in df.columns and 'time_in_hospital' in df.columns:
-    df['procedures_per_day'] = df['num_procedures'] / (df['time_in_hospital'] + 1)
-    print("  ✓ Created: procedures_per_day")
-
-# Interaction 3: Lab tests × Time in Hospital
-if 'num_lab_procedures' in df.columns and 'time_in_hospital' in df.columns:
-    df['labs_per_day'] = df['num_lab_procedures'] / (df['time_in_hospital'] + 1)
-    print("  ✓ Created: labs_per_day")
-
 # Interaction 4: Total prior visits
 prior_visit_cols = ['number_outpatient', 'number_emergency', 'number_inpatient']
 if all(col in df.columns for col in prior_visit_cols):
