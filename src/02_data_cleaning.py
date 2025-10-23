@@ -32,7 +32,7 @@ import seaborn as sns
 
 print("\n[1] Loading raw data from Step 1...")
 try:
-    df = pd.read_csv('data/raw/diabetic_data.csv')
+    df = pd.read_csv('../data/raw/diabetes_data.csv')
     print(f"✓ Data loaded: {df.shape}")
 except FileNotFoundError:
     print("✗ Error: 'diabetes_raw_data.csv' not found.")
