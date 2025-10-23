@@ -123,7 +123,7 @@ binary_features = []
 
 # Flag: HbA1c tested
 if 'A1Cresult' in df.columns:
-    df['A1C_tested'] = (df['A1Cresult'] != 'None').astype(int)
+    df['A1C_tested'] = (df['A1Cresult'] != 'NoTest').astype(int)
     binary_features.append('A1C_tested')
     print("  ✓ Created: A1C_tested")
 

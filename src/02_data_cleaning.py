@@ -59,17 +59,25 @@ question_mark_count = (df == '?').sum().sum()
 df.replace('?', np.nan, inplace=True)
 print(f"  - Converted {question_mark_count:,} '?' values to NaN")
 
+# Canonicalization for A1Cresult: convert NaN to 'NoTest'
+# Check if column exists
+if 'A1Cresult' in df.columns:
+    print(f"\n[2.2] Canonicalization of A1Cresult:")
+    df['A1Cresult'] = df['A1Cresult'].fillna('NoTest')
+    no_test_count = (df['A1Cresult'] == 'NoTest').sum()
+    print(f"  - Canonicalized A1Cresult: filled NaN to 'NoTest' for {no_test_count:,} rows")
+
 # Display missing values after conversion
 missing_summary = df.isnull().sum()
 missing_summary = missing_summary[missing_summary > 0].sort_values(ascending=False)
 
-print(f"\n[2.2] Columns with missing values ({len(missing_summary)} total):")
+print(f"\n[2.3] Columns with missing values ({len(missing_summary)} total):")
 for col, count in missing_summary.items():
     pct = (count / len(df)) * 100
     print(f"  {col}: {count:,} ({pct:.2f}%)")
 
 # Decision: Drop columns with >50% missing
-threshold = 0.50
+threshold = 0.39
 cols_to_drop = []
 for col, count in missing_summary.items():
     pct = count / len(df)
@@ -77,7 +85,7 @@ for col, count in missing_summary.items():
         cols_to_drop.append(col)
 
 if cols_to_drop:
-    print(f"\n[2.3] Dropping columns with >{threshold*100}% missing:")
+    print(f"\n[2.4] Dropping columns with >{threshold*100}% missing:")
     for col in cols_to_drop:
         pct = (missing_summary[col] / len(df)) * 100
         print(f"  - {col}: {pct:.2f}% missing")
