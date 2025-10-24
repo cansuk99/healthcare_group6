@@ -27,7 +27,7 @@ sns.set_style("whitegrid")
 # ============================================================================
 
 try:
-    diabetes_data = pd.read_csv('data/raw/diabetic_data.csv')
+    diabetes_data = pd.read_csv('../data/raw/diabetes_data.csv')
     
     # Use the DataFrame directly
     df = diabetes_data
@@ -36,14 +36,9 @@ try:
     print(f"  - Shape: {df.shape}")
     print(f"  - Features: {df.shape[1]}")
     print(f"  - Records: {len(df)}")
-    
+
 except Exception as e:
     print(f"✗ Error loading dataset: {e}")
-    print("\nNote: Make sure you have installed ucimlrepo:")
-    print("  pip install ucimlrepo")
-    #exit() - this exit is killing me turns off the terminal
-# initially was create to be pulled from ucimlrepo, we moved to local source
-
 
 # Create folders if they don't exist
 os.makedirs('../reports', exist_ok=True)
