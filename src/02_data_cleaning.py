@@ -11,10 +11,11 @@ This script:
     - diabetes type
     - diabetes control status
     - diabetes complication (binary and categories)
-5. Handles duplicate patients (multiple encounters)
-6. Creates binary target variable
-7. Handles outliers and data quality issues
-8. Saves cleaned data for analysis
+5. Creation of per day features
+6. Handles duplicate patients (multiple encounters)
+7. Creates binary target variable
+8. Handles outliers and data quality issues
+9. Saves cleaned data for analysis
 """
 
 import pandas as pd
@@ -23,9 +24,6 @@ import json
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-print("="*80)
-print("STEP 2: DATA PREPROCESSING")
-print("="*80)
 
 
 # ============================================================================
@@ -34,12 +32,12 @@ print("="*80)
 
 print("\n[1] Loading raw data from Step 1...")
 try:
-    df = pd.read_csv('../data/raw/diabetic_data.csv')
+    df = pd.read_csv('../data/raw/diabetes_data.csv')
     print(f"✓ Data loaded: {df.shape}")
 except FileNotFoundError:
     print("✗ Error: 'diabetes_raw_data.csv' not found.")
     print("  Please run Step 1 first to generate the data file.")
-    exit()
+    #exit()
 
 initial_rows = len(df)
 initial_cols = len(df.columns)
@@ -49,9 +47,6 @@ initial_cols = len(df.columns)
 # 2. HANDLE MISSING VALUE INDICATORS
 # ============================================================================
 
-print("\n" + "="*80)
-print("[2] HANDLING MISSING VALUE INDICATORS")
-print("="*80)
 
 # Replace '?' with NaN
 print("\n[2.1] Converting '?' to NaN...")
@@ -97,9 +92,7 @@ if cols_to_drop:
 # 3. ICD-9 DIAGNOSIS CODE MAPPING
 # ============================================================================
 
-print("\n" + "="*80)
-print("[3] MAPPING ICD-9 CODES TO DISEASE CATEGORIES")
-print("="*80)
+
 
 def map_icd9_to_category(code):
     """
@@ -119,7 +112,7 @@ def map_icd9_to_category(code):
     """
     
     if pd.isna(code):
-        return 'Unknown'
+        return '0'
     
     # Convert to string
     code_str = str(code).strip()
@@ -187,9 +180,6 @@ print("\n✓ ICD-9 mapping complete: 700+ codes → 9 categories per diagnosis")
 # ============================================================================
 # codes retrived from https://www.aapc.com/codes/icd9-codes/250.93
 
-print("\n" + "=" * 80)
-print("[3] MAPPING ICD-9 CODES TO DIABETES DESCRIPTIONS")
-print("=" * 80)
 
 def create_get_value_fn(mapping):
     def get_value(row, default_value:str = "250"):
@@ -239,13 +229,31 @@ df['diab_complication_categories'] = df['diab_code'].map(diab_complications_cate
 
 print("\n✓ ICD-diabetes information mapping complete")
 
+
 # ============================================================================
-# 5. CREATE BINARY TARGET VARIABLE
+# 5. PER DAY FEATURES
+# ============================================================================
+# Interaction 1: Medications × Time in Hospital
+if 'num_medications' in df.columns and 'time_in_hospital' in df.columns:
+    df['meds_per_day'] = df['num_medications'] / (df['time_in_hospital'].apply(lambda x: max(x, 1)))  # +1 to avoid division by zero
+    print("  ✓ Created: meds_per_day (medications per hospital day)")
+
+# Interaction 2: Procedures × Time in Hospital
+if 'num_procedures' in df.columns and 'time_in_hospital' in df.columns:
+    df['procedures_per_day'] = df['num_procedures'] / (df['time_in_hospital'].apply(lambda x: max(x, 1)))
+    print("  ✓ Created: procedures_per_day")
+
+# Interaction 3: Lab tests × Time in Hospital
+if 'num_lab_procedures' in df.columns and 'time_in_hospital' in df.columns:
+    df['labs_per_day'] = df['num_lab_procedures'] / (df['time_in_hospital'].apply(lambda x: max(x, 1)))
+    print("  ✓ Created: labs_per_day")
+
+
+# ============================================================================
+# 6. CREATE BINARY TARGET VARIABLE
 # ============================================================================
 
-print("\n" + "="*80)
-print("[5] CREATING BINARY TARGET VARIABLE")
-print("="*80)
+
 
 if 'readmitted' in df.columns:
     print("\n[5.1] Converting to binary classification...")
@@ -269,12 +277,10 @@ if 'readmitted' in df.columns:
         print(f"    → Will need SMOTE or class weighting in modeling phase")
 
 # ============================================================================
-# 6. HANDLE REMAINING MISSING VALUES
+# 7. HANDLE REMAINING MISSING VALUES
 # ============================================================================
 
-print("\n" + "="*80)
-print("[6] IMPUTING REMAINING MISSING VALUES")
-print("="*80)
+
 
 # Check remaining missing values
 remaining_missing = df.isnull().sum()
@@ -289,12 +295,17 @@ if len(remaining_missing) > 0:
         
         print(f"\n  Processing: {col} ({count:,} missing, {pct:.2f}%)")
         
-        # Strategy depends on data type
-        if df[col].dtype in ['int64', 'float64']:
+        if col.startswith('diag_'):
+            # For diagnostic columns: replace '?' with None (already handled above)
+            df[col] = df[col].where(df[col].notna(), "0")
+            diag_cols = [c for c in df.columns if c.startswith('diag_')]
+            print('Number of no diagnoses for diag_1, diag_2, diag_3 in total: ', df[diag_cols].isna().sum())
+
+        elif df[col].dtype in ['int64', 'float64']:
             # Numerical: impute with median
             median_val = df[col].median()
             df[col].fillna(median_val, inplace=True)
-            print(f"    → Imputed with median: {median_val}")
+            print(f"    → '{col}' imputed with median: {median_val}")
         else:
             # Categorical: impute with mode or 'Unknown'
             if df[col].mode().empty:
@@ -322,9 +333,7 @@ df = df.groupby("patient_nbr", as_index=False).first()
 # DATA QUALITY SUMMARY
 # ============================================================================
 
-print("\n" + "="*80)
-print("[7] PREPROCESSING SUMMARY")
-print("="*80)
+
 
 print(f"\nInitial dataset:")
 print(f"  - Rows: {initial_rows:,}")
@@ -347,12 +356,10 @@ total_missing = df.isnull().sum().sum()
 print(f"\nFinal missing values: {total_missing}")
 
 # ============================================================================
-# 8. SAVE CLEANED DATA
+# 9. SAVE CLEANED DATA
 # ============================================================================
 
-print("\n" + "="*80)
-print("[8] SAVING CLEANED DATA")
-print("="*80)
+
 
 # Save cleaned dataset
 df.to_csv('../data/processed/diabetes_cleaned_data.csv', index=False)
@@ -374,7 +381,6 @@ report_df = pd.DataFrame(list(preprocessing_report.items()),
                          columns=['Metric', 'Value'])
 report_df.to_csv('../reports/02_preprocessing_report.csv', index=False)
 print("✓ Preprocessing report saved as '02_preprocessing_report.csv'")
-
 print("\n" + "="*80)
 print("STEP 2 COMPLETE!")
 print("="*80)

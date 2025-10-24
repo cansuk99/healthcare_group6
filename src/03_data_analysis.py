@@ -22,9 +22,7 @@ sns.set_style("whitegrid")
 plt.rcParams['figure.figsize'] = (12, 8)
 plt.rcParams['font.size'] = 10
 
-print("="*80)
-print("STEP 3: EXPLORATORY DATA ANALYSIS")
-print("="*80)
+
 
 # ============================================================================
 # 1. LOAD CLEANED DATA
@@ -39,7 +37,7 @@ try:
 except FileNotFoundError:
     print("✗ Error: 'diabetes_cleaned_data.csv' not found.")
     print("  Please run Step 2 first to generate the cleaned data.")
-    exit()
+    #exit()
 
 # Quick verification
 print("\n[1.1] Data Quality Check:")
@@ -56,9 +54,6 @@ if 'readmitted_binary' in df.columns:
 # 2. UNIVARIATE ANALYSIS - NUMERICAL FEATURES
 # ============================================================================
 
-print("\n" + "="*80)
-print("[2] UNIVARIATE ANALYSIS - NUMERICAL FEATURES")
-print("="*80)
 
 # Identify numerical columns
 numerical_cols = df.select_dtypes(include=[np.number]).columns.tolist()
@@ -111,9 +106,7 @@ print("  ✓ Saved: 03_numerical_distributions.png")
 # 3. UNIVARIATE ANALYSIS - CATEGORICAL FEATURES
 # ============================================================================
 
-print("\n" + "="*80)
-print("[3] UNIVARIATE ANALYSIS - CATEGORICAL FEATURES")
-print("="*80)
+
 
 # Identify categorical columns
 categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
@@ -187,9 +180,7 @@ print("  ✓ Saved: 03_categorical_distributions.png")
 # 4. BIVARIATE ANALYSIS - RELATIONSHIP WITH TARGET
 # ============================================================================
 
-print("\n" + "="*80)
-print("[4] BIVARIATE ANALYSIS - RELATIONSHIP WITH TARGET")
-print("="*80)
+
 
 if 'readmitted_binary' not in df.columns:
     print("  ✗ Target variable 'readmitted_binary' not found. Skipping bivariate analysis.")
@@ -288,9 +279,7 @@ else:
 # 5. CORRELATION ANALYSIS
 # ============================================================================
 
-print("\n" + "="*80)
-print("[5] CORRELATION ANALYSIS")
-print("="*80)
+
 
 print("\n[5.1] Computing correlations for numerical features...")
 
@@ -328,9 +317,7 @@ if 'readmitted_binary' in corr_matrix.columns:
 # 6. KEY INSIGHTS SUMMARY
 # ============================================================================
 
-print("\n" + "="*80)
-print("[6] KEY INSIGHTS FOR MODELING")
-print("="*80)
+
 
 insights = []
 
@@ -339,7 +326,7 @@ if 'readmitted_binary' in df.columns:
     imbalance_ratio = target_dist[0] / target_dist[1]
     insights.append(f"1. Class imbalance ratio: 1:{imbalance_ratio:.1f} - SMOTE recommended")
 
-# Insight 2: Top correlated features
+# Insight 2: Top 3 correlated features
 if 'readmitted_binary' in corr_matrix.columns:
     top_3_features = target_corr.head(3).index.tolist()
     insights.append(f"2. Top 3 predictive features: {', '.join(top_3_features)}")
@@ -369,9 +356,7 @@ for insight in insights:
 # 7. SAVE EDA REPORT
 # ============================================================================
 
-print("\n" + "="*80)
-print("[7] SAVING EDA REPORT")
-print("="*80)
+
 
 # Create summary report
 eda_summary = {
