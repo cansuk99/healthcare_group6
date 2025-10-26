@@ -3,7 +3,7 @@ Initial_Rows,101766
 Final_Rows,71518
 Rows_Removed,30248
 Initial_Columns,50
-Final_Columns,59
-Columns_Dropped,3
+Final_Columns,56
+Columns_Dropped,4
 Missing_Values_Imputed,192849
 Final_Missing_Values,0

@@ -23,6 +23,7 @@ import numpy as np
 import json
 import matplotlib.pyplot as plt
 import seaborn as sns
+from pandas.api.types import is_numeric_dtype
 
 
 
@@ -280,7 +281,15 @@ if 'readmitted' in df.columns:
 # 7. HANDLE REMAINING MISSING VALUES
 # ============================================================================
 
-
+# Define known categorical columns (use this list instead of relying solely on dtype)
+likely_cats = {
+    'race','gender','age','admission_type_id','discharge_disposition_id','admission_source_id',
+    'medical_specialty','A1Cresult','change','diabetesMed','insulin',
+    'diab_type','diab_control','diab_complication_binary','diab_complication_categories',
+    'metformin','repaglinide','nateglinide','chlorpropamide','glimepiride',
+    'acetohexamide','glipizide','glyburide','tolbutamide','pioglitazone','rosiglitazone',
+    'acarbose','miglitol','troglitazone','tolazamide','examide','citoglipton'
+}
 
 # Check remaining missing values
 remaining_missing = df.isnull().sum()
@@ -296,25 +305,37 @@ if len(remaining_missing) > 0:
         print(f"\n  Processing: {col} ({count:,} missing, {pct:.2f}%)")
         
         if col.startswith('diag_'):
-            # For diagnostic columns: replace '?' with None (already handled above)
+            # For diagnostic columns: replace missing with "0" (no diagnosis)
             df[col] = df[col].where(df[col].notna(), "0")
             diag_cols = [c for c in df.columns if c.startswith('diag_')]
             print('Number of no diagnoses for diag_1, diag_2, diag_3 in total: ', df[diag_cols].isna().sum())
 
-        elif df[col].dtype in ['int64', 'float64']:
-            # Numerical: impute with median
-            median_val = df[col].median()
-            df[col].fillna(median_val, inplace=True)
-            print(f"    → '{col}' imputed with median: {median_val}")
-        else:
+        # Treat explicitly listed categorical columns as categorical even if dtype is numeric
+        elif col in likely_cats:
             # Categorical: impute with mode or 'Unknown'
             if df[col].mode().empty:
                 df[col].fillna('Unknown', inplace=True)
-                print(f"    → Imputed with: 'Unknown'")
+                print(f"    → Imputed '{col}' with: 'Unknown'")
             else:
                 mode_val = df[col].mode()[0]
-                df[col] = df[col].fillna(mode_val, inplace=False)
-                print(f"    → Imputed with mode: '{mode_val}'")
+                df[col].fillna(mode_val, inplace=True)
+                print(f"    → Imputed '{col}' with mode: '{mode_val}'")
+
+        # Numeric columns: use median imputation
+        elif is_numeric_dtype(df[col]):
+            median_val = df[col].median()
+            df[col].fillna(median_val, inplace=True)
+            print(f"    → '{col}' imputed with median: {median_val}")
+
+        else:
+            # Fallback: treat as categorical
+            if df[col].mode().empty:
+                df[col].fillna('Unknown', inplace=True)
+                print(f"    → Imputed '{col}' with: 'Unknown' (fallback)")
+            else:
+                mode_val = df[col].mode()[0]
+                df[col].fillna(mode_val, inplace=True)
+                print(f"    → Imputed '{col}' with mode: '{mode_val}' (fallback)")
     
     print(f"\n✓ All missing values handled")
 else:
@@ -328,6 +349,13 @@ else:
 df = df.sort_values(["patient_nbr", "encounter_id"])
 #  Keep only the first encounter per patient 
 df = df.groupby("patient_nbr", as_index=False).first()
+
+# Drop identifier columns that add no information for modeling
+drop_ids = [c for c in ['patient_nbr', 'encounter_id'] if c in df.columns]
+if drop_ids:
+    df.drop(columns=drop_ids, inplace=True)
+    print(f"\n✓ Dropped identifier columns: {', '.join(drop_ids)}")
+
 
 # ============================================================================
 # DATA QUALITY SUMMARY
