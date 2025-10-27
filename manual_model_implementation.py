@@ -135,10 +135,6 @@ plt.show()
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
-print("Before SMOTE:", np.bincount(y))
-X_res, y_res = SMOTE(random_state=42).fit_resample(X_scaled, y)
-print("After SMOTE:", np.bincount(y_res))
-
 # Logistic Regression, Random Forest, Gradient Boosting with SMOTE and Threshold application
 
 models = {
@@ -147,7 +143,11 @@ models = {
     "GradientBoosting": GradientBoostingClassifier(random_state=42, n_estimators=300, learning_rate=0.08)
 }
 
-X_train, X_test, y_train, y_test = train_test_split(X_res, y_res, test_size=0.3, random_state=42, stratify=y_res)
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.3, random_state=42, stratify=y)
+
+print("Before SMOTE:", np.bincount(y))
+X_train, y_train = SMOTE(random_state=42).fit_resample(X_train, y_train)
+print("After SMOTE:", np.bincount(y_train))
 
 results = []
 
@@ -174,8 +174,8 @@ for name, model in models.items():
 cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
 for name, model in models.items():
-    f1 = cross_val_score(model, X_res, y_res, cv=cv, scoring='f1', n_jobs=-1).mean()
-    auc = cross_val_score(model, X_res, y_res, cv=cv, scoring='roc_auc', n_jobs=-1).mean()
+    f1 = cross_val_score(model, X_test, y_test, cv=cv, scoring='f1', n_jobs=-1).mean()
+    auc = cross_val_score(model, X_test, y_test, cv=cv, scoring='roc_auc', n_jobs=-1).mean()
     print(f"{name}: CV F1={f1:.3f}, AUC={auc:.3f}")
 
 # The cross-validation results show that the models maintain high F1 and AUC scores across all folds, confirming that their performance on the balanced dataset is consistent and not due to a single lucky split.
