@@ -41,10 +41,12 @@ print("="*80)
 # 1. LOAD FINAL FEATURE SET
 # ============================================================================
 
+selected_features = ["diab_complication_categories", "diab_type", "diab_control", "diag_1_category", "diag_2_category" ,"diag_3_category", "admission_type_id","discharge_disposition_id"]
+
 print("\n[1] Loading final feature set from Step 4...")
 try:
-    X = pd.read_csv('../data/selected-features/04_X_features.csv')
-    y = pd.read_csv('../data/selected-features/04_y_target.csv').values.ravel()  # Convert to 1D array
+    X = pd.read_csv('../data/diabetes_cleaned_data/diabetes_cleaned_data.csv')[selected_features].values
+    y = pd.read_csv('../data/diabetes_cleaned_data/diabetes_cleaned_data.csv')[["readmitted_binary"]] # Convert to 1D array
     print(f"✓ Data loaded successfully")
     print(f"  - Features: {X.shape[1]}")
     print(f"  - Samples: {X.shape[0]}")
