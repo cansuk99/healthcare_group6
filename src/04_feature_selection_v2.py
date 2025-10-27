@@ -221,37 +221,84 @@ interaction_features = [
 engineered_cols = interaction_features + poly_features + binary_features
 engineered_cols = list(dict.fromkeys(engineered_cols))  # dedupe, keep order
 
+
+
+#df = df.copy()
+
+#  after testing the models we are adding NEW FEATURE HOPING TO GET A BETTER RECALL ------------------
+
+#Cross-intensity interactions (medications × labs × visits)
+df['meds_x_labs']   = df['num_medications'] * df['num_lab_procedures']
+df['meds_x_visits'] = df['num_medications'] * df['total_prior_visits']
+df['stay_x_meds']   = df['time_in_hospital'] * df['num_medications']
+df['stay_x_labs']   = df['time_in_hospital'] * df['num_lab_procedures']
+df['labs_x_visits'] = df['num_lab_procedures'] * df['total_prior_visits']
+
+interaction_features.extend(['meds_x_labs', 'meds_x_visits', 'stay_x_meds', 'stay_x_labs', 'labs_x_visits'])
+
+# Maybe the combination of these two factors matters more than each one individually.
+# encoding nonlinear relationships that  ANN can use to pick up complex patterns 
+
+
+#Binary interaction strength (chronic condition × intensity)
+df['meds_x_diab_comp'] = df['num_medications'] * df['diab_complication_binary']
+df['labs_x_diab_comp'] = df['num_lab_procedures'] * df['diab_complication_binary']
+
+
+binary_features.extend(['meds_x_diab_comp', 'labs_x_diab_comp'])
+
+
 print("\n[SUMMARY] Engineered feature count:", len(engineered_cols))
 print("Engineered features:", engineered_cols)
 
 
+#let me doublecheck
+df[['meds_x_labs','meds_x_visits','stay_x_meds','stay_x_labs',
+    'labs_x_visits','meds_x_diab_comp','labs_x_diab_comp']].head()
 
+df.shape
+
+pd.to_pickle(df, 'data/selected-features/feature_all_not_onehot.pkl')
 
 # ============================================================================
 # 5. MAPPING VALUES
 # ---------------------------------------------------------------------------
-# this wasn moved in step2
+# this was moved in step2 as i did not know that it exists here, anyway was needed to remove some rows
 
 
 # ============================================================================
 # 6. ENCODE CATEGORICAL VARIABLES
 # ============================================================================
 
+y = df['readmitted_binary'].astype(int)
+
+cols_to_drop = [
+    'encounter_id', 'patient_nbr', 'discharge_disposition_id',
+    'admission_type_id', 'discharge_disposition_desc', 'admission_source_id',
+    'readmitted', 'readmited_binary'
+]
+
+df = df.drop(columns=cols_to_drop, errors='ignore')
+
+noise = ['diag_1', 'diag_2', 'diag_3']
+
+df = df.drop(columns=noise, errors='ignore')
+
 
 
 print("\n[5.1] One-hot encoding categorical features...")
 
 # Identify categorical columns for encoding
-categorical_to_encode = []
-for col in df.columns:
-    if df[col].dtype == 'object' and col != 'readmitted':  # Exclude original target
-        categorical_to_encode.append(col)
-
+categorical_to_encode = [col for col in df.columns if df[col].dtype == 'object']
 # One-hot encode
 df_encoded = pd.get_dummies(df, columns=categorical_to_encode, drop_first=True)
 
 print(f"  ✓ Encoded {len(categorical_to_encode)} categorical features")
 print(f"  ✓ Dataset shape after encoding: {df_encoded.shape}")
+
+data_to_save = {'X': df_encoded, 'y': y}
+save_path = "data/selected-features/feature_all_onehot.pkl"
+pd.to_pickle(data_to_save, save_path)
 
 # ============================================================================
 # 7. PREPARE FEATURE MATRIX
@@ -404,14 +451,14 @@ print(f"\n[11.1] Final dataset dimensions: {X_final.shape[0]} samples, {X_final.
 
 # Save combined dataset as pickle
 final_data = {'X': X_final, 'y': y_final}
-pd.to_pickle(final_data, '../data/selected-features/final_dataset.pkl')
-print("✓ Final dataset saved as 'final_dataset.pkl'")
+pd.to_pickle(final_data, 'data/selected-features/feature_selection_onehot.pkl')
+
 
 # Save feature info
 feature_info = pd.DataFrame({'Feature': final_features,
                              'Votes': [feature_votes.get(f, 0) for f in final_features]})
 feature_info.sort_values('Votes', ascending=False).to_csv('../reports/04_selected_features.csv', index=False)
-print("✓ Feature list saved as '04_selected_features.csv'")
+
 
 
 # ============================================================================
@@ -473,9 +520,10 @@ summary_df = pd.DataFrame(list(summary.items()), columns=['Metric', 'Value'])
 summary_df.to_csv('../reports/04_feature_engineering_summary.csv', index=False)
 print("✓ Summary saved as '04_feature_engineering_summary.csv'")
 
+
+
+
 print("\n" + "="*80)
-print("STEP 4 COMPLETE!")
-print("="*80)
 print("\nGenerated Files:")
 print("  - 04_X_features.csv (final feature matrix)")
 print("  - 04_y_target.csv (target variable)")

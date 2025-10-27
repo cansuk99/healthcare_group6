@@ -153,6 +153,11 @@ df.drop(columns=["died_or_hospice"], inplace=True)
 
 len(df)
 
+# ============================================================================
+# 1.3. Droping citoglipton and examide -- all values are the same
+# ============================================================================
+# these 2 variables have only 1 value "no"
+df.drop(columns=["citoglipton", "examide"])
 
 # ============================================================================
 # 2. HANDLE MISSING VALUE INDICATORS

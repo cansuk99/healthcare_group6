@@ -1,3 +1,7 @@
+# This file is a mess, do not try to understand. At the end will delete
+# I ran new models but in the mean time I changed data structure,new features etc.
+# All is V2.py files so my changes will not affect original.
+#Sorry no time for pretty
 """
 Step 5: Model Development and Training
 Diabetes 130-US Hospitals Dataset
@@ -14,11 +18,13 @@ This script:
 9. aditional line
 """
 
+import time
 import json
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
@@ -33,32 +39,243 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-# ============================================================================
-# 1. LOAD FINAL FEATURE SET
-# ============================================================================
-
-
-X = pd.read_csv('../data/selected-features/04_X_features.csv')
-y = pd.read_csv('../data/selected-features/04_y_target.csv').values.ravel()  # Convert to 1D array
 
 
 
-# Verify class distribution
-unique, counts = np.unique(y, return_counts=True)
-print(f"\n[1.1] Target class distribution:")
-for cls, count in zip(unique, counts):
-    pct = (count / len(y)) * 100
-    print(f"  Class {cls}: {count:,} ({pct:.2f}%)")
-
-# ============================================================================
-# 2. TRAIN-TEST SPLIT
-# ============================================================================
 
 
-# Split with stratification to maintain class balance
+
+# Random Forest   ==========================================
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.utils import resample
+from sklearn.model_selection import train_test_split
+
+
+
+# 1. We start from the full X_model, y_final
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42, stratify=y
+    X_model,
+    y_final,
+    test_size=0.2,
+    random_state=42,
+    stratify=y_final
 )
+
+# 2. Build a balanced training set by undersampling the majority class
+train_df = pd.concat([X_train, y_train], axis=1)
+target_col = y_train.name if hasattr(y_train, "name") and y_train.name is not None else "target_tmp"
+if target_col == "target_tmp":
+    train_df[target_col] = y_train.values  # ensure column exists
+
+majority_df = train_df[train_df[target_col] == 0]
+minority_df = train_df[train_df[target_col] == 1]
+
+# downsample majority to the same size as minority
+majority_downsampled = resample(
+    majority_df,
+    replace=False,
+    n_samples=len(minority_df),
+    random_state=42
+)
+
+balanced_df = pd.concat([majority_downsampled, minority_df])
+
+# shuffle rows
+balanced_df = balanced_df.sample(frac=1, random_state=42).reset_index(drop=True)
+
+# split back into X_balanced, y_balanced
+X_balanced = balanced_df.drop(columns=[target_col])
+y_balanced = balanced_df[target_col]
+
+print("Balanced training set shape:", X_balanced.shape, y_balanced.shape)
+print("Class counts in balanced training set:")
+print(y_balanced.value_counts())
+
+# 3. Train RandomForest on the balanced data (no class_weight now)
+rf_balanced = RandomForestClassifier(
+    n_estimators=300,
+    max_depth=None,
+    min_samples_split=2,
+    min_samples_leaf=1,
+    n_jobs=-1,
+    random_state=42
+)
+
+rf_balanced.fit(X_balanced, y_balanced)
+
+# 4. Evaluate on the ORIGINAL untouched test set
+y_pred_rf = rf_balanced.predict(X_test)
+
+print("\n=== Classification report (Random Forest on undersampled data) ===")
+print(classification_report(y_test, y_pred_rf))
+
+print("\n=== Confusion matrix (Random Forest on undersampled data) ===")
+print(confusion_matrix(y_test, y_pred_rf))
+
+
+# RAndom Forest with SMOTE -------
+
+from imblearn.pipeline import Pipeline as ImbPipeline
+from imblearn.over_sampling import SMOTE
+
+
+
+# 1. Build SMOTE + Random Forest pipeline
+smote_rf = ImbPipeline(steps=[
+    ('smote', SMOTE(random_state=42, sampling_strategy='auto')),
+    ('model', RandomForestClassifier(
+        n_estimators=300,
+        max_depth=None,
+        min_samples_split=2,
+        min_samples_leaf=1,
+        n_jobs=-1,
+        random_state=42
+    ))
+])
+
+# 2. Fit model (SMOTE is applied only to X_train/y_train internally)
+smote_rf.fit(X_train, y_train)
+
+# 3. Evaluate on untouched test data
+y_pred_smote = smote_rf.predict(X_test)
+
+print("\n=== Classification report (SMOTE + Random Forest) ===")
+print(classification_report(y_test, y_pred_smote))
+
+print("\n=== Confusion matrix (SMOTE + Random Forest) ===")
+print(confusion_matrix(y_test, y_pred_smote))
+
+
+# Gradient Boosting, ---------
+
+from sklearn.ensemble import HistGradientBoostingClassifier
+
+hgb_clf = HistGradientBoostingClassifier(
+    max_depth=None,
+    learning_rate=0.1,
+    max_iter=300,
+    class_weight='balanced',  # tell it minority matters
+    random_state=42
+)
+
+hgb_clf.fit(X_train, y_train)
+y_pred_hgb = hgb_clf.predict(X_test)
+
+print("\n=== Classification report (HistGradientBoosting) ===")
+print(classification_report(y_test, y_pred_hgb))
+
+print("\n=== Confusion matrix (HistGradientBoosting) ===")
+print(confusion_matrix(y_test, y_pred_hgb))
+
+
+###########################################
+#ANN ============================================
+
+from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import StandardScaler
+from imblearn.over_sampling import RandomOverSampler
+
+
+# Build the ANN pipeline
+# 1. Oversample ONLY the training set
+ros = RandomOverSampler(random_state=42)
+X_train_bal, y_train_bal = ros.fit_resample(X_train, y_train)
+
+print("Class balance BEFORE:", y_train.value_counts().to_dict())
+print("Class balance AFTER :", y_train_bal.value_counts().to_dict())
+
+# 2. ANN pipeline (same architecture for now)
+ann_balanced = Pipeline(steps=[
+    ('scaler', StandardScaler(with_mean=False)),
+    ('mlp', MLPClassifier(
+        hidden_layer_sizes=(64, 32, 16),
+        activation='relu',
+        solver='adam',
+        learning_rate_init=0.001,
+        max_iter=300,
+        random_state=42,
+        early_stopping=True,
+        verbose=True
+    ))
+])
+
+# 3. Fit on the OVERSAMPLED train data
+ann_balanced.fit(X_train_bal, y_train_bal)
+
+# 4. Evaluate on the REAL, untouched test data
+y_pred_ann_bal = ann_balanced.predict(X_test)
+
+print("\n=== Confusion matrix (ANN + Oversampling) ===")
+print(confusion_matrix(y_test, y_pred_ann_bal))
+
+print("\n=== Classification report (ANN + Oversampling) ===")
+print(classification_report(y_test, y_pred_ann_bal))
+
+# ANN undersampling ----------------------------------------------
+# Combine X_train and y_train to downsample majority class
+# 1️⃣ Combine X_train and y_train
+train_df = pd.concat([X_train, y_train], axis=1)
+target_col = y_train.name or "target"
+
+# 2️⃣ Separate majority (0) and minority (1)
+majority_df = train_df[train_df[target_col] == 0]
+minority_df = train_df[train_df[target_col] == 1]
+
+print(f"Original class distribution:\n{train_df[target_col].value_counts()}")
+
+# 3️⃣ Downsample the majority class to match minority count
+majority_downsampled = resample(
+    majority_df,
+    replace=False,                      # sample without replacement
+    n_samples=len(minority_df),         # match minority count
+    random_state=42
+)
+
+# 4️⃣ Combine back into a balanced dataset
+balanced_df = pd.concat([majority_downsampled, minority_df])
+balanced_df = balanced_df.sample(frac=1, random_state=42).reset_index(drop=True)
+
+# 5️⃣ Split into X and y
+X_balanced = balanced_df.drop(columns=[target_col])
+y_balanced = balanced_df[target_col]
+
+print(f"\n✅ Balanced training set shape: {X_balanced.shape}")
+print("Balanced class distribution:")
+print(y_balanced.value_counts())
+
+# 6️⃣ Define the ANN pipeline
+ann_under = Pipeline(steps=[
+    ('scaler', StandardScaler(with_mean=False)),
+    ('mlp', MLPClassifier(
+        hidden_layer_sizes=(64, 32, 16),
+        activation='relu',
+        solver='adam',
+        learning_rate_init=0.001,
+        max_iter=300,
+        random_state=42,
+        early_stopping=True,
+        verbose=True
+    ))
+])
+
+# 7️⃣ Train on undersampled balanced data
+ann_under.fit(X_balanced, y_balanced)
+
+# 8️⃣ Evaluate on the real, imbalanced test set
+y_pred_under = ann_under.predict(X_test)
+
+print("\n=== Confusion matrix (ANN + Undersampling) ===")
+print(confusion_matrix(y_test, y_pred_under))
+
+print("\n=== Classification report (ANN + Undersampling) ===")
+print(classification_report(y_test, y_pred_under))
+
+
+
+
+
 
 print(f"\n[2.1] Split completed:")
 print(f"  Training set: {X_train.shape[0]:,} samples ({X_train.shape[0]/len(X)*100:.1f}%)")
