@@ -24,6 +24,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from lightgbm import LGBMClassifier
 from sklearn.metrics import (classification_report, confusion_matrix, roc_auc_score,
                              roc_curve, precision_recall_curve, f1_score, 
                              accuracy_score, precision_score, recall_score)
@@ -143,7 +144,8 @@ baseline_models = {
     'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42, 
                                            max_depth=10, n_jobs=-1),
     'Gradient Boosting': GradientBoostingClassifier(n_estimators=100, random_state=42,
-                                                     max_depth=5)
+                                                     max_depth=5),
+    'LightGBM': LGBMClassifier(random_state=42, n_jobs=-1, n_estimators=100)
 }
 
 print("\n[5.1] Training baseline models...")
