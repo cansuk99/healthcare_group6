@@ -25,24 +25,19 @@ import numpy as np
 import json
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+import pickle
 
 
 # ============================================================================
 # 1. LOAD RAW DATA
 # ============================================================================
 
-print("\n[1] Loading raw data from Step 1...")
-try:
-    df = pd.read_csv('data/raw/diabetes_data.csv')
-    print(f"✓ Data loaded: {df.shape}")
-except FileNotFoundError:
-    print("✗ Error: 'diabetes_raw_data.csv' not found.")
-    print("  Please run Step 1 first to generate the data file.")
-    #exit()
 
-initial_rows = len(df)
-initial_cols = len(df.columns)
+df = pd.read_csv('data/raw/diabetes_data.csv')
+
+print(df.shape)
+print(df.info())
+
 
 # ============================================================================
 # 1.1 Mapping Dicts from IDS_mapping
@@ -51,16 +46,20 @@ initial_cols = len(df.columns)
 
 # --- 1. Build mapping dicts (from IDS_mapping.csv content) ---
 
+df["admission_type_id"] = df["admission_type_id"].replace({5: 9, 6: 9, 8: 9})
+
 admission_type_map = {
     1: "Emergency",
     2: "Urgent",
     3: "Elective",
     4: "Newborn",
-    5: "Not Available",
-    6: "NULL",
     7: "Trauma Center",
-    8: "Not Mapped"
+    9: "Not available"
 }
+
+df["admission_type_desc"] = df["admission_type_id"].map(admission_type_map)
+# the admission ID will be removed for modeling 
+
 
 discharge_disposition_map = {
      1: "Home",
@@ -95,6 +94,12 @@ discharge_disposition_map = {
     30: "Other Health Care Institution"
 }
 
+df["discharge_disposition_desc"] = df["discharge_disposition_id"].map(discharge_disposition_map)
+# discharge will be removed all toghether so no need to replace
+
+
+df["admission_source_id"] = df["admission_source_id"].replace({9: 27, 15: 27, 17: 27, 20: 27})
+
 admission_source_map = {
     1: "Physician Referral",
     2: "Clinic Referral",
@@ -104,43 +109,30 @@ admission_source_map = {
     6: "Transfer from Other Facility",
     7: "Emergency Room",
     8: "Court/Law Enforcement",
-    9: "Not Available",
-    10: "Transfer from critial access hospital",
+    10: "Transfer from critical access hospital",
     11: "Normal Delivery",
     12: "Premature Delivery",
     13: "Sick Baby",
     14: "Extramural Birth",
-    15: "Not Available",
-    17: "NULL",
     18: "Transfer From Another Home Health Agency",
     19: "Readmission to Same Home Health Agency",
-    20: "Not Mapped",
     21: "Unknown/Invalid",
     22: "Transfer from Hospital Inpatient / Same Facility",
     23: "Born Inside This Hospital",
     24: "Born Outside This Hospital",
     25: "Transfer from Ambulatory Surgery Center",
-    26: "Transfer from Hospice"
+    26: "Transfer from Hospice",
+    27: "Not available"
 }
 
-# --- 2. Map them into new readable columns ---
 
-if "admission_type_id" in df.columns:
-    df["admission_type_desc"] = df["admission_type_id"].map(admission_type_map)
-
-if "discharge_disposition_id" in df.columns:
-    df["discharge_disposition_desc"] = df["discharge_disposition_id"].map(discharge_disposition_map)
-
-if "admission_source_id" in df.columns:
-    df["admission_source_desc"] = df["admission_source_id"].map(admission_source_map)
+df["admission_source_desc"] = df["admission_source_id"].map(admission_source_map)
 
 # --- 3. Create a flag for rows that should be excluded from training
 # (patients who died or went to hospice cannot be "readmitted")
 
 dead_or_hospice_codes = [11, 13, 14, 19, 20, 21]
-
 df["died_or_hospice"] = df["discharge_disposition_id"].isin(dead_or_hospice_codes).astype(int)
-
 
 # ============================================================================
 # 1.2. Droping dead or hospice
@@ -159,13 +151,19 @@ len(df)
 # these 2 variables have only 1 value "no"
 df.drop(columns=["citoglipton", "examide"])
 
+# droping ID columns admision-id, admision source-id, discharge 
+#i think that admision or admision source is a bit reduntant and no need to keep them all
+
+df = df.drop(columns=["admission_source_id", "admission_type_id", "discharge_disposition_desc", "discharge_disposition_id"], errors="ignore")
+
+
 # ============================================================================
 # 2. HANDLE MISSING VALUE INDICATORS
 # ============================================================================
 
 
 # Replace '?' with NaN
-print("\n[2.1] Converting '?' to NaN...")
+
 question_mark_count = (df == '?').sum().sum()
 df.replace('?', np.nan, inplace=True)
 print(f"  - Converted {question_mark_count:,} '?' values to NaN")
@@ -368,33 +366,6 @@ print("  ✓ Created: labs_per_day")
 
 
 # ============================================================================
-# 6. CREATE BINARY TARGET VARIABLE
-# ============================================================================
-
-
-
-if 'readmitted' in df.columns:
-    print("\n[5.1] Converting to binary classification...")
-    print("  Readmitted <30 days = 1, Otherwise = 0")
-    
-    # Create binary target
-    df['readmitted_binary'] = (df['readmitted'] == '<30').astype(int)
-    
-    # Show distribution
-    target_counts = df['readmitted_binary'].value_counts()
-    print(f"\n  Class distribution:")
-    for cls, count in target_counts.items():
-        pct = (count / len(df)) * 100
-        label = "Readmitted <30" if cls == 1 else "Not readmitted <30"
-        print(f"    Class {cls} ({label}): {count:,} ({pct:.2f}%)")
-    
-    # Calculate imbalance ratio
-    if 1 in target_counts.index and 0 in target_counts.index:
-        ratio = target_counts[0] / target_counts[1]
-        print(f"\n  ⚠ Imbalance ratio: 1:{ratio:.1f}")
-        print(f"    → Will need SMOTE or class weighting in modeling phase")
-
-# ============================================================================
 # 7. HANDLE REMAINING MISSING VALUES
 # ============================================================================
 
@@ -439,6 +410,9 @@ else:
     print("\n✓ No remaining missing values")
 
 
+# save data for the initial trial
+#df.to_pickle("data/processed/allrows_diabetes_cleaned.pkl")
+
 # ============================================================================
 # 7. Remove Duplicate Patient Encounters 
 # ============================================================================
@@ -448,68 +422,189 @@ else:
 # df = df.groupby("patient_nbr", as_index=False).first()
 
 # ============================================================================
-# DATA QUALITY SUMMARY
+# 7A. AND CLEAN SOME MORE
 # ============================================================================
+import os
+out_dir = "figures/outliers"
+os.makedirs(out_dir, exist_ok=True)
+
+#remove patients under 20 and over 90
+#AGE - outliers
+
+plt.boxplot(df['age'].str.extract('(\d+)').astype(int))
+plt.title("Age distribution")
+plt.ylabel("Age lower bound")
+plt.show()
+plt.savefig(os.path.join(out_dir, "encounters_boxplotboxplot_age.png"), dpi=300)
+plt.close()
 
 
+print(df['age'].value_counts().sort_index())
 
-print(f"\nInitial dataset:")
-print(f"  - Rows: {initial_rows:,}")
-print(f"  - Columns: {initial_cols}")
+df = df[~df['age'].isin(['[0-10)', '[10-20)', '[90-100)'])]
 
-print(f"\nFinal dataset:")
-print(f"  - Rows: {len(df):,} ({((len(df)-initial_rows)/initial_rows*100):+.2f}%)")
-print(f"  - Columns: {len(df.columns)} ({len(df.columns)-initial_cols:+d})")
+#===================================
 
-print(f"\nChanges made:")
-print(f"  ✓ Converted '?' to NaN")
-print(f"  ✓ Dropped {len(cols_to_drop)} high-missing columns")
-print(f"  ✓ Mapped diagnosis codes to categories")
-print(f"  ✓ Removed duplicate patient encounters")
-print(f"  ✓ Created binary target variable")
-print(f"  ✓ Imputed remaining missing values")
+encounters_per_patient = df.groupby("patient_nbr")["encounter_id"].nunique()
 
-# Verify no missing values remain
-total_missing = df.isnull().sum().sum()
-print(f"\nFinal missing values: {total_missing}")
+# Create a summary: how many patients have 1, 2, 3, ... encounters
+encounter_distribution = encounters_per_patient.value_counts().sort_index()
+
+print(encounter_distribution)
+
+encounter_distribution.plot(kind="bar", figsize=(10,4))
+plt.xlabel("Number of encounters per patient")
+plt.ylabel("Number of patients")
+plt.title("Distribution of patient encounter counts")
+plt.tight_layout()
+plt.show()
+plt.savefig(os.path.join(out_dir, "barplot encounters_age.png"), dpi=300)
+plt.close()
+
+
+plt.figure(figsize=(6, 4))
+plt.boxplot(encounters_per_patient, vert=True)
+plt.ylabel("Number of encounters per patient")
+plt.title("Boxplot of patient encounter counts")
+plt.show()
+plt.savefig(os.path.join(out_dir, "boxplot_encounters_age.png"), dpi=300)
+plt.close()
+
+#keep patients with < 13 encounters (remove outliers)
+
+encounters_per_patient_grouped = df.groupby("patient_nbr")["encounter_id"].nunique()
+patients_to_keep = encounters_per_patient_grouped[encounters_per_patient <= 13].index
+
+
+df = df[df["patient_nbr"].isin(patients_to_keep)]
+
+
+len(df)
+
+#---------time in the hospital---------
+
+hospital_days_count = df["time_in_hospital"].value_counts().sort_index()
+
+plt.figure(figsize=(7,4))
+hospital_days_count.plot(kind="bar")
+plt.xlabel("Days in hospital")
+plt.ylabel("Number of patients")
+plt.title("Distribution of hospital stay duration")
+plt.tight_layout()
+plt.savefig(os.path.join(out_dir, "time_in_hospital_distribution.png"), dpi=300)
+plt.close()
+
+plt.figure(figsize=(6,4))
+plt.boxplot(df["time_in_hospital"], vert=True)
+plt.ylabel("Days in hospital")
+plt.title("Boxplot of hospital stay duration")
+plt.tight_layout()
+plt.savefig(os.path.join(out_dir, "time_in_hospital_boxplot.png"), dpi=300)
+plt.close()
+
+#keep no outliers here --------
+
+cols_main = ["num_lab_procedures", "num_procedures", "num_medications"]
+cols_ratio = ["meds_per_day", "labs_per_day", "procedures_per_day"]
+cols_extra = ["number_diagnoses"]
+
+procedure_counts = df["num_procedures"].value_counts().sort_index()
+procedure_summary = procedure_counts.reset_index()
+procedure_summary.columns = ["procedures", "patients"]
+
+print(procedure_summary)
+
+
+procedure_counts = df["num_lab_procedures"].value_counts().sort_index()
+procedure_summary = procedure_counts.reset_index()
+procedure_summary.columns = ["procedures", "patients"]
+
+print(procedure_summary)
+# will drop all lab procedures after 99(outliers)
+df = df[df["num_lab_procedures"] <= 99]
+
+
+procedure_counts = df["num_medications"].value_counts().sort_index()
+procedure_summary = procedure_counts.reset_index()
+procedure_summary.columns = ["procedures", "patients"]
+# will drop mode than 63 medications - 
+df = df[df["num_medications"] <= 63]
+
+procedure_counts = df["number_diagnoses"].value_counts().sort_index()
+procedure_summary = procedure_counts.reset_index()
+procedure_summary.columns = ["procedures", "patients"]
+# will drop mode than 9 and less than 2
+df = df[df["number_diagnoses"] <= 9]
+df = df[df["number_diagnoses"] >= 2]
+
+
+procedure_counts = df["meds_per_day"].value_counts().sort_index()
+procedure_summary = procedure_counts.reset_index()
+procedure_summary.columns = ["procedures", "patients"]
+# I'm not sure that this is meaningful there are 487 rows for classification it does not makes sense
+# I will drop this 
+
+procedure_counts = df["labs_per_day"].value_counts().sort_index()
+procedure_summary = procedure_counts.reset_index()
+procedure_summary.columns = ["procedures", "patients"]
+# same story 800 rows
+
+procedure_counts = df["procedures_per_day"].value_counts().sort_index()
+procedure_summary = procedure_counts.reset_index()
+procedure_summary.columns = ["procedures", "patients"]
+# same story 80 rows - still lots
+# I have a felling that this was part of the problem
+df = df.drop(columns=["meds_per_day", "labs_per_day", "procedures_per_day"], errors="ignore")
+
+len(df)
+
+
+for col in cols_main:
+    plt.figure(figsize=(6, 4))
+    plt.boxplot(df[col])
+    plt.title(f"Outliers: {col}")
+    plt.ylabel("Count")
+    plt.tight_layout()
+    plt.savefig(os.path.join(out_dir, f"{col}_boxplot.png"), dpi=300)
+    plt.close()
+
+
+for col in cols_ratio:
+    if col in df.columns:
+        plt.figure(figsize=(6, 4))
+        plt.boxplot(df[col])
+        plt.title(f"Outliers: {col}")
+        plt.ylabel("Value")
+        plt.tight_layout()
+        plt.savefig(os.path.join(out_dir, f"{col}_boxplot.png"), dpi=300)
+        plt.close()
+
+
+plt.figure(figsize=(6, 4))
+plt.boxplot(df["number_diagnoses"])
+plt.title("Outliers: Number of diagnoses")
+plt.ylabel("Diagnoses count")
+plt.tight_layout()
+plt.savefig(os.path.join(out_dir, "number_diagnoses_boxplot.png"), dpi=300)
+plt.close()
+
+len(df)
+
+
+# save data for trial nuber 2
+df.to_pickle("data/processed/trimr_diabetes_cleaned.pkl")
+
+print(df.shape)
+print(df.info())
+
 
 # ============================================================================
 # 9. SAVE CLEANED DATA
 # ============================================================================
-import pickle
 
-
-df.to_pickle("data/processed/diabetes_cleaned.pkl")
 
 
 
 # Save cleaned dataset
 # df.to_csv('../data/processed/diabetes_cleaned_data.csv', index=False)
 # print("\n✓ Cleaned data saved as 'diabetes_cleaned_data.csv'")
-
-# Save preprocessing report
-preprocessing_report = {
-    'Initial_Rows': initial_rows,
-    'Final_Rows': len(df),
-    'Rows_Removed': initial_rows - len(df),
-    'Initial_Columns': initial_cols,
-    'Final_Columns': len(df.columns),
-    'Columns_Dropped': len(cols_to_drop),
-    'Missing_Values_Imputed': question_mark_count,
-    'Final_Missing_Values': total_missing
-}
-
-report_df = pd.DataFrame(list(preprocessing_report.items()), 
-                         columns=['Metric', 'Value'])
-report_df.to_csv('../reports/02_preprocessing_report.csv', index=False)
-print("✓ Preprocessing report saved as '02_preprocessing_report.csv'")
-print("\n" + "="*80)
-print("STEP 2 COMPLETE!")
-print("="*80)
-print("\nNext Steps:")
-print("  1. Review 'diabetes_cleaned_data.csv'")
-print("  2. Check '02_preprocessing_report.csv' for summary")
-print("  3. Proceed to Step 3: Exploratory Data Analysis")
-print("="*80)
-
-
