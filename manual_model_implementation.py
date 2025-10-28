@@ -15,6 +15,56 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 
 
+def evaluate_model(model, X, y):
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    f1 = cross_val_score(model, X, y, cv=cv, scoring='f1', n_jobs=-1).mean()
+    auc = cross_val_score(model, X, y, cv=cv, scoring='roc_auc', n_jobs=-1).mean()
+    return f1, auc
+
+def create_visualizations(y_test, y_pred, model_name, predict_fn_name, features_selection_technique):
+    sns.set_theme(style="whitegrid", font_scale=1.1)
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+    fig.suptitle(f"{model_name} Evaluation Dashboard – Manual Feature Selection, '{predict_fn_name}' \n features selection technique: {features_selection_technique}", fontsize=16, weight="bold")
+
+    #F1-score Barplot
+    sns.barplot(ax=axes[0,0], data=results_df, x="Model", y="F1", palette="crest", edgecolor="black")
+    axes[0,0].set_title("F1-Scores After SMOTE + Threshold Tuning", fontsize=13, weight='bold')
+    axes[0,0].set_ylim(0, 1)
+    axes[0,0].grid(axis='y', alpha=0.3)
+    for i, v in enumerate(results_df['F1']):
+        axes[0,0].text(i, v + 0.02, f"{v:.3f}", ha='center', fontweight='bold')
+
+    # AUC Comparison Bar Chart
+    sns.barplot(ax=axes[0,1], data=results_df, x="Model", y="AUC", palette="viridis", edgecolor="black")
+    axes[0,1].set_title("AUC Comparison", fontsize=13, weight='bold')
+    axes[0,1].set_ylim(0, 1)
+    axes[0,1].grid(axis='y', alpha=0.3)
+    for i, v in enumerate(results_df['AUC']):
+        axes[0,1].text(i, v + 0.02, f"{v:.3f}", ha='center', fontweight='bold')
+
+    # ROC Curves
+    for name, model in models.items():
+        model.fit(X_train, y_train)
+        y_proba = model.predict_proba(X_test)[:, 1]
+        RocCurveDisplay.from_predictions(y_test, y_proba, name=f"{name}", ax=axes[1,0])
+    axes[1,0].plot([0,1], [0,1], 'k--', lw=1)
+    axes[1,0].set_title("ROC Curves", fontsize=13, weight='bold')
+
+    # Confusion Matrix for selected model
+    cm = confusion_matrix(y_test, y_pred)
+
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+    disp.plot(ax=axes[1,1], cmap="Blues", values_format='d', colorbar=True)
+
+    axes[1,1].set_title(f"Confusion Matrix - {model_name}", fontsize=13, weight='bold')
+    axes[1,1].set_xlabel("Predicted Label", fontsize=11, labelpad=10)
+    axes[1,1].set_ylabel("Actual Label", fontsize=11, labelpad=10)
+
+    axes[1,1].xaxis.set_ticklabels(["Not Readmit", "Readmit"])
+    axes[1,1].yaxis.set_ticklabels(["Not Readmit", "Readmit"])
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.97])
+    return fig, axes
 # Objective: Can hospital readmissions within 30 days be predicted with an F1-score?
 # We used the cleaned diabetes dataset and apply manual feature selection based on statistical significance and clinical reasoning.
 # This approach reflects a more explainable, research-driven logic, where features are included if they are **statistically significant predictors of readmission** and **clinically meaningful**.
