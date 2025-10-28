@@ -135,26 +135,30 @@ dead_or_hospice_codes = [11, 13, 14, 19, 20, 21]
 df["died_or_hospice"] = df["discharge_disposition_id"].isin(dead_or_hospice_codes).astype(int)
 
 # ============================================================================
-# 1.2. Droping dead or hospice
+# 1.2. Droping:  expired or hospice
 # ============================================================================
-# if they are dead of hospice the patient will not be readmited. Safe do drop
 
-# You can then filter before model training like so:
-df = df[df["died_or_hospice"] == 0].copy()
-df.drop(columns=["died_or_hospice"], inplace=True)
 
-len(df)
+dead_or_hospice_codes = [11, 13, 14, 19, 20, 21]
+df = df[~df["discharge_disposition_id"].isin(dead_or_hospice_codes)].copy()
+
 
 # ============================================================================
 # 1.3. Droping citoglipton and examide -- all values are the same
 # ============================================================================
 # these 2 variables have only 1 value "no"
-df.drop(columns=["citoglipton", "examide"])
+
+columns_to_drop = []
+
+columns_to_drop.extend(["citoglipton", "examide"])
 
 # droping ID columns admision-id, admision source-id, discharge 
-#i think that admision or admision source is a bit reduntant and no need to keep them all
 
-df = df.drop(columns=["admission_source_id", "admission_type_id", "discharge_disposition_desc", "discharge_disposition_id"], errors="ignore")
+# ============================================================================
+# 1.3. # droping ID columns admision-id, admision source-id, discharge 
+# ============================================================================
+
+columns_to_drop.extend(["admission_source_id", "admission_type_id", "discharge_disposition_desc", "discharge_disposition_id"])
 
 
 # ============================================================================
@@ -170,11 +174,10 @@ print(f"  - Converted {question_mark_count:,} '?' values to NaN")
 
 # Canonicalization for A1Cresult: convert NaN to 'NoTest'
 # Check if column exists
-if 'A1Cresult' in df.columns:
-    print(f"\n[2.2] Canonicalization of A1Cresult:")
-    df['A1Cresult'] = df['A1Cresult'].fillna('NoTest')
-    no_test_count = (df['A1Cresult'] == 'NoTest').sum()
-    print(f"  - Canonicalized A1Cresult: filled NaN to 'NoTest' for {no_test_count:,} rows")
+
+df['A1Cresult'] = df['A1Cresult'].fillna('NoTest')
+# no_test_count = (df['A1Cresult'] == 'NoTest').sum()
+#    print(f"filled NaN to 'NoTest' for {no_test_count:,} rows")
 
 # Display missing values after conversion
 missing_summary = df.isnull().sum()
@@ -207,9 +210,6 @@ if cols_to_drop:
 # ============================================================================
 # 3. ICD-9 DIAGNOSIS CODE MAPPING
 # ============================================================================
-
-
-
 def map_icd9_to_category(code):
     """
     Map ICD-9 diagnosis codes to 9 disease categories.
@@ -289,6 +289,7 @@ for col in diag_cols:
             print(f"    {cat}: {count:,} ({pct:.2f}%)")
 
 print("\n✓ ICD-9 mapping complete: 700+ codes → 9 categories per diagnosis")
+
 
 
 # ============================================================================
@@ -375,6 +376,7 @@ print("  ✓ Created: labs_per_day")
 remaining_missing = df.isnull().sum()
 remaining_missing = remaining_missing[remaining_missing > 0]
 
+
 if len(remaining_missing) > 0:
     print(f"\n[6.1] Columns still with missing values: {len(remaining_missing)}")
     
@@ -428,8 +430,8 @@ import os
 out_dir = "figures/outliers"
 os.makedirs(out_dir, exist_ok=True)
 
-#remove patients under 20 and over 90
-#AGE - outliers
+#remove patients under 18  and over 90
+#---------------------------------AGE - outliers 
 
 plt.boxplot(df['age'].str.extract('(\d+)').astype(int))
 plt.title("Age distribution")
@@ -440,10 +442,9 @@ plt.close()
 
 
 print(df['age'].value_counts().sort_index())
+df = df[~df['age'].isin(['[0-10)', '[10-20)', '[90-100)'])].copy()
 
-df = df[~df['age'].isin(['[0-10)', '[10-20)', '[90-100)'])]
-
-#===================================
+#----------------------------encountes < 13 - keep
 
 encounters_per_patient = df.groupby("patient_nbr")["encounter_id"].nunique()
 
@@ -475,13 +476,10 @@ plt.close()
 encounters_per_patient_grouped = df.groupby("patient_nbr")["encounter_id"].nunique()
 patients_to_keep = encounters_per_patient_grouped[encounters_per_patient <= 13].index
 
+df = df[df["patient_nbr"].isin(patients_to_keep)].copy()
 
-df = df[df["patient_nbr"].isin(patients_to_keep)]
 
-
-len(df)
-
-#---------time in the hospital---------
+#-----------------------time in the hospital--------- good - no putliers
 
 hospital_days_count = df["time_in_hospital"].value_counts().sort_index()
 
@@ -502,7 +500,8 @@ plt.tight_layout()
 plt.savefig(os.path.join(out_dir, "time_in_hospital_boxplot.png"), dpi=300)
 plt.close()
 
-#keep no outliers here --------
+#-------------------------------------multiple cols  --------
+
 
 cols_main = ["num_lab_procedures", "num_procedures", "num_medications"]
 cols_ratio = ["meds_per_day", "labs_per_day", "procedures_per_day"]
@@ -511,52 +510,32 @@ cols_extra = ["number_diagnoses"]
 procedure_counts = df["num_procedures"].value_counts().sort_index()
 procedure_summary = procedure_counts.reset_index()
 procedure_summary.columns = ["procedures", "patients"]
-
 print(procedure_summary)
+# nothing to drop
 
 
 procedure_counts = df["num_lab_procedures"].value_counts().sort_index()
 procedure_summary = procedure_counts.reset_index()
 procedure_summary.columns = ["procedures", "patients"]
-
 print(procedure_summary)
 # will drop all lab procedures after 99(outliers)
-df = df[df["num_lab_procedures"] <= 99]
+df = df[df["num_lab_procedures"] <= 99].copy()
 
 
 procedure_counts = df["num_medications"].value_counts().sort_index()
 procedure_summary = procedure_counts.reset_index()
 procedure_summary.columns = ["procedures", "patients"]
 # will drop mode than 63 medications - 
-df = df[df["num_medications"] <= 63]
+df = df[df["num_medications"] <= 63].copy()
 
 procedure_counts = df["number_diagnoses"].value_counts().sort_index()
 procedure_summary = procedure_counts.reset_index()
 procedure_summary.columns = ["procedures", "patients"]
 # will drop mode than 9 and less than 2
-df = df[df["number_diagnoses"] <= 9]
-df = df[df["number_diagnoses"] >= 2]
+df = df[df["number_diagnoses"] <= 9].copy()
+df = df[df["number_diagnoses"] >= 2].copy()
 
-
-procedure_counts = df["meds_per_day"].value_counts().sort_index()
-procedure_summary = procedure_counts.reset_index()
-procedure_summary.columns = ["procedures", "patients"]
-# I'm not sure that this is meaningful there are 487 rows for classification it does not makes sense
-# I will drop this 
-
-procedure_counts = df["labs_per_day"].value_counts().sort_index()
-procedure_summary = procedure_counts.reset_index()
-procedure_summary.columns = ["procedures", "patients"]
-# same story 800 rows
-
-procedure_counts = df["procedures_per_day"].value_counts().sort_index()
-procedure_summary = procedure_counts.reset_index()
-procedure_summary.columns = ["procedures", "patients"]
-# same story 80 rows - still lots
-# I have a felling that this was part of the problem
-df = df.drop(columns=["meds_per_day", "labs_per_day", "procedures_per_day"], errors="ignore")
-
-len(df)
+# ----------------- plot figures with outlier in case needed for presentation
 
 
 for col in cols_main:
@@ -602,7 +581,10 @@ print(df.info())
 # 9. SAVE CLEANED DATA
 # ============================================================================
 
+columns_to_drop
 
+# save data for trial nuber 2
+df.to_pickle("data/processed/trimr_diabetes_cleaned.pkl")
 
 
 # Save cleaned dataset

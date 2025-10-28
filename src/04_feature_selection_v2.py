@@ -13,18 +13,6 @@ This script:
 """
 
 import time
-
-def timer(func):
-    def wrapper(*args, **kwargs):
-        start = time.perf_counter()
-        result = func(*args, **kwargs)
-        end = time.perf_counter()
-        print(f"{func.__name__} took {end - start:.3f} seconds")
-        return result
-    return wrapper
-
-
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -36,29 +24,25 @@ from sklearn.ensemble import RandomForestClassifier
 import re
 
 
+columns_to_drop = ['citoglipton',
+ 'examide',
+ 'admission_source_id',
+ 'admission_type_id',
+ 'discharge_disposition_desc',
+ 'discharge_disposition_id']
+
+
 # ============================================================================
 # 1. LOAD CLEANED DATA
 # ============================================================================
 
-print("\n[1] Loading cleaned data...")
-# try:
-#     df = pd.read_csv('../data/processed/diabetes_cleaned_data.csv')
-#     print(f"✓ Data loaded: {df.shape}")
-#     ids_raw = pd.read_csv('../data/raw/IDS_mapping.csv', header=None, dtype=str, keep_default_na=False)
-#     print(f"✓ IDs mapping loaded: {ids_raw.shape}")
-# except FileNotFoundError:
-#     print("✗ Error: 'diabetes_cleaned_data.csv' not found.")
-#     print("  Please run Step 2 first.")
-#     #exit()
 
-# if 'readmitted_binary' not in df.columns:
-#     print("✗ Error: Target variable 'readmitted_binary' not found.")
-   # exit()
+#df = pd.read_csv('../data/processed/diabetes_cleaned_data.csv')
 
-df = pd.read_pickle("data/processed/diabetes_cleaned.pkl")
 
-original_features = len(df.columns) - 1
-original_features
+df = pd.read_pickle("data/processed/trimr_diabetes_cleaned.pkl")
+
+
 # ============================================================================
 # 2. CREATE INTERACTION FEATURES
 # ============================================================================
@@ -67,13 +51,13 @@ original_features
 #                 - procedures_per_day
 #                 - Created: labs_per_day
 
-print("\n[2.1] Creating clinically meaningful interactions...")
+
 
 # Interaction 4: Total prior visits
 prior_visit_cols = ['number_outpatient', 'number_emergency', 'number_inpatient']
 if all(col in df.columns for col in prior_visit_cols):
     df['total_prior_visits'] = df[prior_visit_cols].sum(axis=1)
-    print("  ✓ Created: total_prior_visits (sum of all prior visits)")
+    print("(sum of all prior visits)")
 
 # Interaction 5: High utilization flag
 if 'total_prior_visits' in df.columns:
@@ -86,12 +70,10 @@ interaction_features = [f for f in interaction_features if f in df.columns]
 print(f"\n  Total interaction features created: {len(interaction_features)}")
 
 # ============================================================================
-# 3. CREATE POLYNOMIAL FEATURES
+# 3. CREATE squared terms for key continuous variable
 # ============================================================================
 
 
-
-print("\n[3.1] Creating squared terms for key continuous variables...")
 
 # Select variables for polynomial features (based on EDA insights)
 poly_candidates = ['time_in_hospital', 'num_medications', 'num_lab_procedures']
@@ -128,10 +110,6 @@ print(f"\n  Total polynomial features created: {len(poly_features)}")
 # ============================================================================
 
 
-
-print("\n[4.1] Creating binary flags for important conditions...")
-df.columns
-
 binary_features = []
 
 
@@ -161,13 +139,11 @@ binary_features.append('long_stay')
  
 
 # Flag: Many medications (>15)
-
 df['many_medications'] = (df['num_medications'] > 15).astype(int)
 binary_features.append('many_medications')
  
 
 # Flag: Multiple diagnoses (>7)
-
 df['complex_case'] = (df['number_diagnoses'] > 7).astype(int)
 binary_features.append('complex_case')
 
@@ -199,12 +175,12 @@ binary_features.append('discharge_psych')
 
 emergency_like = [1, 2, 7]  # Emergency, Urgent, Trauma Center
 elective_like  = [3]        # Elective
-transfer_like  = [4, 5, 6]  # transferred from other facility/SNF
-newborn_like   = [4]        # depending on mapping, you might drop these later anyway
+transfer_like  = [5, 6]  # transferred from other facility/SNF
+newborn_like   = [4]        #  drop these 
 
 df['admit_emergent']  = df['admission_type_id'].isin([1,2,7]).astype(int)
 df['admit_elective']  = df['admission_type_id'].isin([3]).astype(int)
-df['admit_transfer']  = df['admission_source_id'].isin([4,5,6]).astype(int)
+df['admit_transfer']  = df['admission_source_id'].isin([5,6]).astype(int)
 
 binary_features.extend(['admit_emergent','admit_elective','admit_transfer'])
 
@@ -223,7 +199,7 @@ engineered_cols = list(dict.fromkeys(engineered_cols))  # dedupe, keep order
 
 
 
-#df = df.copy()
+df = df.copy()
 
 #  after testing the models we are adding NEW FEATURE HOPING TO GET A BETTER RECALL ------------------
 
@@ -258,13 +234,42 @@ df[['meds_x_labs','meds_x_visits','stay_x_meds','stay_x_labs',
 
 df.shape
 
+
 pd.to_pickle(df, 'data/selected-features/feature_all_not_onehot.pkl')
 
-# ============================================================================
-# 5. MAPPING VALUES
-# ---------------------------------------------------------------------------
-# this was moved in step2 as i did not know that it exists here, anyway was needed to remove some rows
 
+df = df.copy() # clean copy
+
+# ============================================================================
+# 5. Diag_1,2,3 --  Encoding (Simple + Scalable)
+# ---------------------------------------------------------------------------
+
+# this needs to be done based on the modeling type
+# For ANN will add to the ANN model 
+# ANN doesn't do good with onehot if high cardinality
+
+# Option 1: Frequency Encoding (Simple + Scalable)
+# for col in ['diag_1', 'diag_2', 'diag_3']:
+#     freq = df[col].value_counts()
+#     df[f'{col}_freq'] = df[col].map(freq)
+# Keeps dimensionality low.
+# Captures importance based on prevalence.
+# Loses explicit identity of the codes.
+
+# Option 2: Target Encoding (if you have labels)
+# If predicting a label (e.g., readmission, mortality), encode each code with the mean target.
+# from category_encoders import TargetEncoder
+# encoder = TargetEncoder(cols=['diag_1', 'diag_2', 'diag_3'])
+# df_encoded = encoder.fit_transform(df[['diag_1', 'diag_2', 'diag_3']], df['target'])  # 'target' = your label
+
+# Option 3: Embedding Layer in Neural Network
+# Best if you're using TensorFlow or PyTorch.
+# Instead of manually encoding, map each diagnosis code to an integer and let the model learn embeddings.
+# from sklearn.preprocessing import LabelEncoder
+# for col in ['diag_1', 'diag_2', 'diag_3']:
+#     le = LabelEncoder()
+#     df[col + '_idx'] = le.fit_transform(df[col])
+# Then use these *_idx columns as inputs to embedding layers in your ANN.
 
 # ============================================================================
 # 6. ENCODE CATEGORICAL VARIABLES
@@ -272,17 +277,16 @@ pd.to_pickle(df, 'data/selected-features/feature_all_not_onehot.pkl')
 
 y = df['readmitted_binary'].astype(int)
 
-cols_to_drop = [
-    'encounter_id', 'patient_nbr', 'discharge_disposition_id',
-    'admission_type_id', 'discharge_disposition_desc', 'admission_source_id',
-    'readmitted', 'readmited_binary'
-]
+cols_to_drop.extend(['encounter_id',
+                        'patient_nbr',
+                        'readmited_binary',
+                        'readmitted'])
 
-df = df.drop(columns=cols_to_drop, errors='ignore')
 
-noise = ['diag_1', 'diag_2', 'diag_3']
 
-df = df.drop(columns=noise, errors='ignore')
+
+
+
 
 
 
@@ -350,14 +354,6 @@ print(f"\n  Features with |correlation| > {corr_threshold}: {len(corr_selected)}
         # from module import namesIf a feature helps you predict the target, it will have a higher MI score.
        # If it’s unrelated noise, it will have a score near 0.
 #Unlike correlation, mutual information detects nonlinear relationships — it’s not limited to straight-line effects.
-import multiprocessing
-import platform
-import psutil
-
-print(platform.processor())
-print(f"CPU cores: {multiprocessing.cpu_count()}")
-print(f"Available memory: {psutil.virtual_memory().available / 1e9:.2f} GB")
-
 
 
 from sklearn.feature_selection import mutual_info_classif
