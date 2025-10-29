@@ -24,6 +24,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from lightgbm import LGBMClassifier
 from sklearn.metrics import (classification_report, confusion_matrix, roc_auc_score,
                              roc_curve, precision_recall_curve, f1_score, 
                              accuracy_score, precision_score, recall_score)
@@ -143,7 +144,8 @@ baseline_models = {
     'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42, 
                                            max_depth=10, n_jobs=-1),
     'Gradient Boosting': GradientBoostingClassifier(n_estimators=100, random_state=42,
-                                                     max_depth=5)
+                                                     max_depth=5),
+    'LightGBM': LGBMClassifier(random_state=42, n_jobs=-1, n_estimators=100)
 }
 
 print("\n[5.1] Training baseline models...")
@@ -476,7 +478,67 @@ with open('../models/05_model_metadata.json', 'w') as f:
 print("✓ Model metadata saved as '05_model_metadata.json'")
 
 # ============================================================================
-# 12. FINAL SUMMARY
+# 13. PER MODEL RESULTS FIGURES
+# ============================================================================
+
+print("\n" + "=" * 80)
+print("[13] PER MODEL RESULTS FIGURES")
+print("=" * 80)
+
+for model in models.keys():
+    selected_model = models[model]
+    selected_results = results[model]
+
+    # Confusion matrix
+    cm = confusion_matrix(y_test, selected_results['y_pred'])
+
+    fig = plt.figure(figsize=(20, 6))
+
+    # Plot 1: Confusion Matrix Heatmap
+    ax1 = plt.subplot(1, 3, 1)
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax1,
+                xticklabels=['Not Readmit', 'Readmit'],
+                yticklabels=['Not Readmit', 'Readmit'])
+    ax1.set_title(f'Confusion Matrix - {model}', fontweight='bold')
+    ax1.set_ylabel('Actual')
+    ax1.set_xlabel('Predicted')
+
+
+    # Plot 2: Precision-Recall Curve
+    ax2 = plt.subplot(1, 3, 2)
+    precision_vals, recall_vals, _ = precision_recall_curve(
+        y_test, selected_results['y_pred_proba']
+    )
+    ax2.plot(recall_vals, precision_vals, linewidth=2)
+    ax2.set_xlabel('Recall')
+    ax2.set_ylabel('Precision')
+    ax2.set_title(f'Precision-Recall Curve - {model}', fontweight='bold')
+    ax2.grid(alpha=0.3)
+
+    # Plot 3: Metrics Comparison
+    ax3 = plt.subplot(1, 3, 3)
+    best_metrics = [selected_results['accuracy'], selected_results['precision'],
+                    selected_results['recall'], selected_results['f1_score'], selected_results['roc_auc']]
+    metric_names = ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'ROC-AUC']
+
+    bars = ax3.bar(metric_names, best_metrics, color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd'])
+    ax3.set_ylabel('Score')
+    ax3.set_title(f'{model} - Final Metrics', fontweight='bold')
+    ax3.set_ylim(0, 1)
+    ax3.grid(axis='y', alpha=0.3)
+
+    # Add value labels on bars
+    for bar, value in zip(bars, best_metrics):
+        height = bar.get_height()
+        ax6.text(bar.get_x() + bar.get_width() / 2., height,
+                 f'{value:.3f}', ha='center', va='bottom')
+
+    plt.tight_layout()
+    plt.savefig(f'../figures/05_model_evaluation_{model}.png', dpi=300, bbox_inches='tight')
+    print("  ✓ Saved: 05_model_evaluation.png")
+
+# ============================================================================
+# 14. FINAL SUMMARY
 # ============================================================================
 
 print("\n" + "="*80)
