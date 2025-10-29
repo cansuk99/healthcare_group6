@@ -241,7 +241,7 @@ for features, features_selection_technique in zip([statistical_features, try2_fe
 
     results_df = pd.DataFrame(results)
     results_df.to_csv(
-        f"../reports/05_manual_features_selection_resuls_{features_selection_technique.replace(" ", "_")}.png", index=False)
+        f"../reports/05_manual_features_selection_resuls_{features_selection_technique.replace(" ", "_")}.csv", index=False)
 
     # After applying SMOTE and tuning the classification threshold, the Random Forest and Gradient Boosting models achieve quite low F1-scores (below 0.20).
 
