@@ -267,9 +267,9 @@ for features, features_selection_technique in zip([statistical_features, try2_fe
         y_pred_predict_fn = model.predict(X_test).astype(int)
 
         fig, axs = create_visualizations(y_test, y_pred, model_name, "predict_proba", features_selection_technique, results_df)
-        plt.savefig(f"figures/manual_features_selection_results/{model_name}_predict_proba_{features_selection_technique.replace(" ", "_")}.png")
+        plt.savefig(f"../figures/manual_features_selection_results/{model_name}_predict_proba_{features_selection_technique.replace(" ", "_")}.png")
         fig, axs = create_visualizations(y_test, y_pred_predict_fn, model_name, "predict", features_selection_technique, results_df)
-        plt.savefig(f"figures/manual_features_selection_results/{model_name}_{features_selection_technique.replace(" ", "_")}.png")
+        plt.savefig(f"../figures/manual_features_selection_results/{model_name}_{features_selection_technique.replace(" ", "_")}.png")
 
 # The baseline evaluation with manually selected features shows that the models perform poorly on the dataset. 
 # F1-scores are very low (<0.20), indicating that models struggle to correctly identify patients who are readmitted within 30 days.
