@@ -287,7 +287,7 @@ for features, features_selection_technique in zip(
         y_pred = (y_proba > best_t).astype(int)
 
         recall_score_ = recall_score(y_test, y_pred)
-        precision_score_ = recall_score(y_test, y_pred)
+        precision_score_ = precision_score(y_test, y_pred)
         accuracy_score_ = accuracy_score(y_test, y_pred)
 
         results.append(
