@@ -26,8 +26,12 @@ pip install requirements.txt
 **reports/** → stores model outputs, metrics, and visual summaries
 
 **exploratory analysis/** → ipynb and py files for exploration
-    ` feature-selection-interaction.ipynb ` - Logisitc Regression for finding statistically sigfnificant interaction features (mentioned in presentation)
-    ` manual_model_implementation.py ` -- 3 Models with **manually selected features** based on feature-selection-interaction.ipynb (mentioned in presentation)
+  -  ` feature-selection-interaction.ipynb ` - Logisitc Regression for finding statistically sigfnificant interaction features (mentioned in presentation)
+  -  ` manual_model_implementation.py ` -- 3 Models with **manually selected features** based on feature-selection-interaction.ipynb (mentioned in presentation)
+  -  ` diabetes_type_exploratory_analysis.ipynb `-- Diabetes codes exploration, controlled, uncontrolled, complications
+  -  ` diabetes_type_exploratory_analysis.ipynb ` -- Diabetes Medication, insulin change, type 1, type 2 exploration
+  -  ` multi-encounters.ipynb ` -- multi encounters exploration
+  -  ` feature-selection-uni-and-multivariate.ipynb` -- univariate & multivariable GLM statistical analysis, provides p-values for features
 
 
 - Pipeline stages in src folder **(Automated feature selection)**:
