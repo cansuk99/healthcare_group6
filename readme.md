@@ -32,11 +32,11 @@ pip install requirements.txt
 
 **reports/** → stores model outputs, metrics, and visual summaries
 
-**exploratory analysis/** → ipynb and py files for exploration
+**exploratory analysis/** → ipynb and py files for exploration of impact of various factors on readmission rate
   -  ` feature-selection-interaction.ipynb ` - Logisitc Regression for finding statistically sigfnificant interaction features (mentioned in presentation)
   -  ` manual_model_implementation.py ` -- 3 Models with **manually selected features** based on feature-selection-interaction.ipynb (mentioned in presentation)
-  -  ` diabetes_type_exploratory_analysis.ipynb `-- Diabetes codes exploration, controlled, uncontrolled, complications
-  -  ` diabetes_type_exploratory_analysis.ipynb ` -- Diabetes Medication, insulin change, type 1, type 2 exploration
+  -  ` diabetes_type_exploratory_analysis.ipynb `-- Diabetes type exploration, control level of the disease, presence of complications
+  -  ` diabetes_type_exploratory_analysis.ipynb ` -- Diabetes medication dosage changes during hospital stay (medications grouped by type of effect), insulin dosage change. Per diabetes type exploration.
   -  ` multi-encounters.ipynb ` -- multi encounters exploration
   -  ` feature-selection-uni-and-multivariate.ipynb` -- univariate & multivariable GLM statistical analysis, provides p-values for features
 
