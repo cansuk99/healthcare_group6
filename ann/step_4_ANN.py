@@ -10,7 +10,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import classification_report, confusion_matrix, precision_score, accuracy_score
-from sklearn.metrics import RocCurveDisplay,
+from sklearn.metrics import RocCurveDisplay
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.metrics import f1_score
 from sklearn.metrics import (

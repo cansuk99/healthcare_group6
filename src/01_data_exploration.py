@@ -16,10 +16,9 @@ import seaborn as sns
 import os
 
 # Set display options
-pd.set_option('display.max_columns', None)
-pd.set_option('display.max_rows', 100)
+pd.set_option("display.max_columns", None)
+pd.set_option("display.max_rows", 100)
 sns.set_style("whitegrid")
-
 
 
 # ============================================================================
@@ -27,11 +26,11 @@ sns.set_style("whitegrid")
 # ============================================================================
 
 try:
-    diabetes_data = pd.read_csv('../data/raw/diabetes_data.csv')
-    
+    diabetes_data = pd.read_csv("../data/raw/diabetes_data.csv")
+
     # Use the DataFrame directly
     df = diabetes_data
-    
+
     print("✓ Dataset loaded successfully!")
     print(f"  - Shape: {df.shape}")
     print(f"  - Features: {df.shape[1]}")
@@ -41,13 +40,12 @@ except Exception as e:
     print(f"✗ Error loading dataset: {e}")
 
 # Create folders if they don't exist
-os.makedirs('../reports', exist_ok=True)
-os.makedirs('../figures', exist_ok=True)
+os.makedirs("../reports", exist_ok=True)
+os.makedirs("../figures", exist_ok=True)
 
 # ============================================================================
 # 2. INITIAL DATA INSPECTION
 # ============================================================================
-
 
 
 # Display first few rows
@@ -65,7 +63,7 @@ print("\n[2.3] Numerical Features - Summary Statistics:")
 print(df.describe())
 
 print("\n[2.4] Categorical Features - Unique Values:")
-categorical_cols = df.select_dtypes(include=['object']).columns
+categorical_cols = df.select_dtypes(include=["object"]).columns
 for col in categorical_cols[:10]:  # Show first 10 categorical columns
     print(f"  {col}: {df[col].nunique()} unique values")
     if df[col].nunique() <= 10:
@@ -76,31 +74,28 @@ for col in categorical_cols[:10]:  # Show first 10 categorical columns
 # ============================================================================
 
 
-
-if 'readmitted' in df.columns:
+if "readmitted" in df.columns:
     print("\n[3.1] Readmission Distribution:")
-    readmit_counts = df['readmitted'].value_counts()
-    readmit_pct = df['readmitted'].value_counts(normalize=True) * 100
-    
-    readmit_summary = pd.DataFrame({
-        'Count': readmit_counts,
-        'Percentage': readmit_pct.round(2)
-    })
+    readmit_counts = df["readmitted"].value_counts()
+    readmit_pct = df["readmitted"].value_counts(normalize=True) * 100
+
+    readmit_summary = pd.DataFrame(
+        {"Count": readmit_counts, "Percentage": readmit_pct.round(2)}
+    )
     print(readmit_summary)
-    
+
     # Create binary target for <30 days readmission
     print("\n[3.2] Creating Binary Target (<30 days readmission):")
-    df['readmitted_binary'] = (df['readmitted'] == '<30').astype(int)
-    
-    binary_counts = df['readmitted_binary'].value_counts()
-    binary_pct = df['readmitted_binary'].value_counts(normalize=True) * 100
-    
-    binary_summary = pd.DataFrame({
-        'Count': binary_counts,
-        'Percentage': binary_pct.round(2)
-    })
+    df["readmitted_binary"] = (df["readmitted"] == "<30").astype(int)
+
+    binary_counts = df["readmitted_binary"].value_counts()
+    binary_pct = df["readmitted_binary"].value_counts(normalize=True) * 100
+
+    binary_summary = pd.DataFrame(
+        {"Count": binary_counts, "Percentage": binary_pct.round(2)}
+    )
     print(binary_summary)
-    
+
     print("\n  ⚠ Class Imbalance Detected:")
     print(f"    - Class 0 (Not readmitted <30): {binary_pct[0]:.2f}%")
     print(f"    - Class 1 (Readmitted <30): {binary_pct[1]:.2f}%")
@@ -112,19 +107,17 @@ if 'readmitted' in df.columns:
 # ============================================================================
 
 
-
 # Calculate missing values
 missing_counts = df.isnull().sum()
 missing_pct = (df.isnull().sum() / len(df)) * 100
 
-missing_df = pd.DataFrame({
-    'Missing_Count': missing_counts,
-    'Missing_Percentage': missing_pct
-})
+missing_df = pd.DataFrame(
+    {"Missing_Count": missing_counts, "Missing_Percentage": missing_pct}
+)
 
 # Filter columns with missing values
-missing_df = missing_df[missing_df['Missing_Count'] > 0].sort_values(
-    'Missing_Percentage', ascending=False
+missing_df = missing_df[missing_df["Missing_Count"] > 0].sort_values(
+    "Missing_Percentage", ascending=False
 )
 
 if len(missing_df) > 0:
@@ -136,18 +129,14 @@ else:
 # Check for '?' as missing indicator
 print("\n[4.2] Checking for '?' as missing value indicator:")
 question_mark_cols = []
-for col in df.select_dtypes(include=['object']).columns:
-    if '?' in df[col].values:
-        count = (df[col] == '?').sum()
+for col in df.select_dtypes(include=["object"]).columns:
+    if "?" in df[col].values:
+        count = (df[col] == "?").sum()
         pct = (count / len(df)) * 100
-        question_mark_cols.append({
-            'Column': col,
-            'Count': count,
-            'Percentage': pct
-        })
+        question_mark_cols.append({"Column": col, "Count": count, "Percentage": pct})
 
 if question_mark_cols:
-    qm_df = pd.DataFrame(question_mark_cols).sort_values('Percentage', ascending=False)
+    qm_df = pd.DataFrame(question_mark_cols).sort_values("Percentage", ascending=False)
     print(qm_df)
     print("\n  ⚠ Found '?' values - these need to be treated as missing!")
 else:
@@ -158,7 +147,7 @@ else:
 # ============================================================================
 
 
-diag_cols = ['diag_1', 'diag_2', 'diag_3']
+diag_cols = ["diag_1", "diag_2", "diag_3"]
 for col in diag_cols:
     if col in df.columns:
         print(f"\n[5.{diag_cols.index(col)+1}] {col}:")
@@ -176,26 +165,25 @@ print("  Mapping based on: Strack et al. (2014), Table 2")
 # ============================================================================
 
 
-
-if 'patient_nbr' in df.columns:
-    unique_patients = df['patient_nbr'].nunique()
+if "patient_nbr" in df.columns:
+    unique_patients = df["patient_nbr"].nunique()
     total_encounters = len(df)
     duplicate_encounters = total_encounters - unique_patients
-    
+
     print("\n[6.1] Patient Encounter Summary:")
     print(f"  - Total encounters: {total_encounters:,}")
     print(f"  - Unique patients: {unique_patients:,}")
     print(f"  - Duplicate encounters: {duplicate_encounters:,}")
     print(f"  - Average encounters per patient: {total_encounters/unique_patients:.2f}")
-    
+
     # Find patients with multiple encounters
-    encounter_counts = df['patient_nbr'].value_counts()
+    encounter_counts = df["patient_nbr"].value_counts()
     multiple_encounters = encounter_counts[encounter_counts > 1]
-    
+
     print("\n[6.2] Patients with Multiple Encounters:")
     print(f"  - Patients with >1 encounter: {len(multiple_encounters):,}")
     print(f"  - Max encounters for one patient: {encounter_counts.max()}")
-    
+
     print("\n  ⚠ Action Required: Keep only one encounter per patient")
     print("    Strategy: Select encounter with longest time_in_hospital")
 
@@ -206,57 +194,70 @@ if 'patient_nbr' in df.columns:
 
 # Create figure with subplots
 fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-fig.suptitle('Diabetes Hospital Readmission - Initial Data Exploration', 
-             fontsize=16, fontweight='bold')
+fig.suptitle(
+    "Diabetes Hospital Readmission - Initial Data Exploration",
+    fontsize=16,
+    fontweight="bold",
+)
 
 # Plot 1: Target Variable Distribution
-if 'readmitted' in df.columns:
+if "readmitted" in df.columns:
     ax1 = axes[0, 0]
-    readmit_counts.plot(kind='bar', ax=ax1, color=['#2ecc71', '#e74c3c', '#f39c12'])
-    ax1.set_title('Readmission Status Distribution', fontweight='bold')
-    ax1.set_xlabel('Readmission Category')
-    ax1.set_ylabel('Count')
-    ax1.tick_params(axis='x', rotation=45)
-    
+    readmit_counts.plot(kind="bar", ax=ax1, color=["#2ecc71", "#e74c3c", "#f39c12"])
+    ax1.set_title("Readmission Status Distribution", fontweight="bold")
+    ax1.set_xlabel("Readmission Category")
+    ax1.set_ylabel("Count")
+    ax1.tick_params(axis="x", rotation=45)
+
     # Add percentage labels
     for i, (idx, val) in enumerate(readmit_counts.items()):
         pct = (val / len(df)) * 100
-        ax1.text(i, val, f'{pct:.1f}%', ha='center', va='bottom')
+        ax1.text(i, val, f"{pct:.1f}%", ha="center", va="bottom")
 
 # Plot 2: Age Distribution
-if 'age' in df.columns:
+if "age" in df.columns:
     ax2 = axes[0, 1]
-    age_order = sorted(df['age'].unique())
-    df['age'].value_counts()[age_order].plot(kind='bar', ax=ax2, color='#3498db')
-    ax2.set_title('Age Distribution', fontweight='bold')
-    ax2.set_xlabel('Age Group')
-    ax2.set_ylabel('Count')
-    ax2.tick_params(axis='x', rotation=45)
+    age_order = sorted(df["age"].unique())
+    df["age"].value_counts()[age_order].plot(kind="bar", ax=ax2, color="#3498db")
+    ax2.set_title("Age Distribution", fontweight="bold")
+    ax2.set_xlabel("Age Group")
+    ax2.set_ylabel("Count")
+    ax2.tick_params(axis="x", rotation=45)
 
 # Plot 3: Time in Hospital Distribution
-if 'time_in_hospital' in df.columns:
+if "time_in_hospital" in df.columns:
     ax3 = axes[1, 0]
-    df['time_in_hospital'].hist(bins=14, ax=ax3, color='#9b59b6', edgecolor='black')
-    ax3.set_title('Time in Hospital Distribution', fontweight='bold')
-    ax3.set_xlabel('Days')
-    ax3.set_ylabel('Frequency')
-    ax3.axvline(df['time_in_hospital'].median(), color='red', 
-                linestyle='--', linewidth=2, label=f'Median: {df["time_in_hospital"].median():.1f}')
+    df["time_in_hospital"].hist(bins=14, ax=ax3, color="#9b59b6", edgecolor="black")
+    ax3.set_title("Time in Hospital Distribution", fontweight="bold")
+    ax3.set_xlabel("Days")
+    ax3.set_ylabel("Frequency")
+    ax3.axvline(
+        df["time_in_hospital"].median(),
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label=f'Median: {df["time_in_hospital"].median():.1f}',
+    )
     ax3.legend()
 
 # Plot 4: Number of Medications Distribution
-if 'num_medications' in df.columns:
+if "num_medications" in df.columns:
     ax4 = axes[1, 1]
-    df['num_medications'].hist(bins=30, ax=ax4, color='#e67e22', edgecolor='black')
-    ax4.set_title('Number of Medications Distribution', fontweight='bold')
-    ax4.set_xlabel('Number of Medications')
-    ax4.set_ylabel('Frequency')
-    ax4.axvline(df['num_medications'].median(), color='red', 
-                linestyle='--', linewidth=2, label=f'Median: {df["num_medications"].median():.1f}')
+    df["num_medications"].hist(bins=30, ax=ax4, color="#e67e22", edgecolor="black")
+    ax4.set_title("Number of Medications Distribution", fontweight="bold")
+    ax4.set_xlabel("Number of Medications")
+    ax4.set_ylabel("Frequency")
+    ax4.axvline(
+        df["num_medications"].median(),
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label=f'Median: {df["num_medications"].median():.1f}',
+    )
     ax4.legend()
 
 plt.tight_layout()
-plt.savefig('../figures/01_initial_exploration.png', dpi=300, bbox_inches='tight')
+plt.savefig("../figures/01_initial_exploration.png", dpi=300, bbox_inches="tight")
 print("\n✓ Visualization saved as '../figures/01_initial_exploration.png'")
 
 
@@ -266,25 +267,27 @@ print("\n✓ Visualization saved as '../figures/01_initial_exploration.png'")
 
 # Create summary report
 summary_stats = {
-    'Total Records': len(df),
-    'Total Features': len(df.columns),
-    'Numerical Features': len(df.select_dtypes(include=[np.number]).columns),
-    'Categorical Features': len(df.select_dtypes(include=['object']).columns),
-    'Missing Values': df.isnull().sum().sum(),
-    'Duplicate Patients': duplicate_encounters if 'patient_nbr' in df.columns else 'N/A',
-    'Readmission <30 days (%)': binary_pct[1] if 'readmitted' in df.columns else 'N/A'
+    "Total Records": len(df),
+    "Total Features": len(df.columns),
+    "Numerical Features": len(df.select_dtypes(include=[np.number]).columns),
+    "Categorical Features": len(df.select_dtypes(include=["object"]).columns),
+    "Missing Values": df.isnull().sum().sum(),
+    "Duplicate Patients": (
+        duplicate_encounters if "patient_nbr" in df.columns else "N/A"
+    ),
+    "Readmission <30 days (%)": binary_pct[1] if "readmitted" in df.columns else "N/A",
 }
 
 
-summary_df = pd.DataFrame(list(summary_stats.items()), columns=['Metric', 'Value'])
-summary_df.to_csv('../reports/01_data_summary.csv', index=False)
+summary_df = pd.DataFrame(list(summary_stats.items()), columns=["Metric", "Value"])
+summary_df.to_csv("../reports/01_data_summary.csv", index=False)
 print("✓ Summary statistics saved as '01_data_summary.csv'")
 
-print("\n" + "="*80)
+print("\n" + "=" * 80)
 print("STEP 1 COMPLETE!")
-print("="*80)
+print("=" * 80)
 print("\nNext Steps:")
 print("  1. Review the generated visualizations")
 print("  2. Examine '01_data_summary.csv' for quick reference")
 print("  3. Proceed to Step 2: Data Preprocessing")
-print("="*80)
+print("=" * 80)

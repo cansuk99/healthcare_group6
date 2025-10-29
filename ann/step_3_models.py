@@ -1,7 +1,7 @@
 # This file is a mess, do not try to understand. At the end will delete
 # I ran new models but in the mean time I changed data structure,new features etc.
 # All is V2.py files so my changes will not affect original.
-#Sorry no time for pretty
+# Sorry no time for pretty
 """
 Step 5: Model Development and Training
 Diabetes 130-US Hospitals Dataset
@@ -30,19 +30,22 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.metrics import (classification_report, confusion_matrix, roc_auc_score,
-                             roc_curve, precision_recall_curve, f1_score, 
-                             accuracy_score, precision_score, recall_score)
+from sklearn.metrics import (
+    classification_report,
+    confusion_matrix,
+    roc_auc_score,
+    roc_curve,
+    precision_recall_curve,
+    f1_score,
+    accuracy_score,
+    precision_score,
+    recall_score,
+)
 from imblearn.over_sampling import SMOTE
 import pickle
 import warnings
-warnings.filterwarnings('ignore')
 
-
-
-
-
-
+warnings.filterwarnings("ignore")
 
 
 # Random Forest   ==========================================
@@ -53,19 +56,18 @@ from sklearn.utils import resample
 from sklearn.model_selection import train_test_split
 
 
-
 # 1. We start from the full X_model, y_final
 X_train, X_test, y_train, y_test = train_test_split(
-    X_model,
-    y_final,
-    test_size=0.2,
-    random_state=42,
-    stratify=y_final
+    X_model, y_final, test_size=0.2, random_state=42, stratify=y_final
 )
 
 # 2. Build a balanced training set by undersampling the majority class
 train_df = pd.concat([X_train, y_train], axis=1)
-target_col = y_train.name if hasattr(y_train, "name") and y_train.name is not None else "target_tmp"
+target_col = (
+    y_train.name
+    if hasattr(y_train, "name") and y_train.name is not None
+    else "target_tmp"
+)
 if target_col == "target_tmp":
     train_df[target_col] = y_train.values  # ensure column exists
 
@@ -74,10 +76,7 @@ minority_df = train_df[train_df[target_col] == 1]
 
 # downsample majority to the same size as minority
 majority_downsampled = resample(
-    majority_df,
-    replace=False,
-    n_samples=len(minority_df),
-    random_state=42
+    majority_df, replace=False, n_samples=len(minority_df), random_state=42
 )
 
 balanced_df = pd.concat([majority_downsampled, minority_df])
@@ -100,7 +99,7 @@ rf_balanced = RandomForestClassifier(
     min_samples_split=2,
     min_samples_leaf=1,
     n_jobs=-1,
-    random_state=42
+    random_state=42,
 )
 
 rf_balanced.fit(X_balanced, y_balanced)
@@ -121,19 +120,23 @@ from imblearn.pipeline import Pipeline as ImbPipeline
 from imblearn.over_sampling import SMOTE
 
 
-
 # 1. Build SMOTE + Random Forest pipeline
-smote_rf = ImbPipeline(steps=[
-    ('smote', SMOTE(random_state=42, sampling_strategy='auto')),
-    ('model', RandomForestClassifier(
-        n_estimators=300,
-        max_depth=None,
-        min_samples_split=2,
-        min_samples_leaf=1,
-        n_jobs=-1,
-        random_state=42
-    ))
-])
+smote_rf = ImbPipeline(
+    steps=[
+        ("smote", SMOTE(random_state=42, sampling_strategy="auto")),
+        (
+            "model",
+            RandomForestClassifier(
+                n_estimators=300,
+                max_depth=None,
+                min_samples_split=2,
+                min_samples_leaf=1,
+                n_jobs=-1,
+                random_state=42,
+            ),
+        ),
+    ]
+)
 
 # 2. Fit model (SMOTE is applied only to X_train/y_train internally)
 smote_rf.fit(X_train, y_train)
@@ -156,8 +159,8 @@ hgb_clf = HistGradientBoostingClassifier(
     max_depth=None,
     learning_rate=0.1,
     max_iter=300,
-    class_weight='balanced',  # tell it minority matters
-    random_state=42
+    class_weight="balanced",  # tell it minority matters
+    random_state=42,
 )
 
 hgb_clf.fit(X_train, y_train)
@@ -171,7 +174,7 @@ print(confusion_matrix(y_test, y_pred_hgb))
 
 
 ###########################################
-#ANN ============================================
+# ANN ============================================
 
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
@@ -187,19 +190,24 @@ print("Class balance BEFORE:", y_train.value_counts().to_dict())
 print("Class balance AFTER :", y_train_bal.value_counts().to_dict())
 
 # 2. ANN pipeline (same architecture for now)
-ann_balanced = Pipeline(steps=[
-    ('scaler', StandardScaler(with_mean=False)),
-    ('mlp', MLPClassifier(
-        hidden_layer_sizes=(64, 32, 16),
-        activation='relu',
-        solver='adam',
-        learning_rate_init=0.001,
-        max_iter=300,
-        random_state=42,
-        early_stopping=True,
-        verbose=True
-    ))
-])
+ann_balanced = Pipeline(
+    steps=[
+        ("scaler", StandardScaler(with_mean=False)),
+        (
+            "mlp",
+            MLPClassifier(
+                hidden_layer_sizes=(64, 32, 16),
+                activation="relu",
+                solver="adam",
+                learning_rate_init=0.001,
+                max_iter=300,
+                random_state=42,
+                early_stopping=True,
+                verbose=True,
+            ),
+        ),
+    ]
+)
 
 # 3. Fit on the OVERSAMPLED train data
 ann_balanced.fit(X_train_bal, y_train_bal)
@@ -228,9 +236,9 @@ print(f"Original class distribution:\n{train_df[target_col].value_counts()}")
 # 3️⃣ Downsample the majority class to match minority count
 majority_downsampled = resample(
     majority_df,
-    replace=False,                      # sample without replacement
-    n_samples=len(minority_df),         # match minority count
-    random_state=42
+    replace=False,  # sample without replacement
+    n_samples=len(minority_df),  # match minority count
+    random_state=42,
 )
 
 # 4️⃣ Combine back into a balanced dataset
@@ -246,19 +254,24 @@ print("Balanced class distribution:")
 print(y_balanced.value_counts())
 
 # 6️⃣ Define the ANN pipeline
-ann_under = Pipeline(steps=[
-    ('scaler', StandardScaler(with_mean=False)),
-    ('mlp', MLPClassifier(
-        hidden_layer_sizes=(64, 32, 16),
-        activation='relu',
-        solver='adam',
-        learning_rate_init=0.001,
-        max_iter=300,
-        random_state=42,
-        early_stopping=True,
-        verbose=True
-    ))
-])
+ann_under = Pipeline(
+    steps=[
+        ("scaler", StandardScaler(with_mean=False)),
+        (
+            "mlp",
+            MLPClassifier(
+                hidden_layer_sizes=(64, 32, 16),
+                activation="relu",
+                solver="adam",
+                learning_rate_init=0.001,
+                max_iter=300,
+                random_state=42,
+                early_stopping=True,
+                verbose=True,
+            ),
+        ),
+    ]
+)
 
 # 7️⃣ Train on undersampled balanced data
 ann_under.fit(X_balanced, y_balanced)
@@ -273,12 +286,10 @@ print("\n=== Classification report (ANN + Undersampling) ===")
 print(classification_report(y_test, y_pred_under))
 
 
-
-
-
-
 print(f"\n[2.1] Split completed:")
-print(f"  Training set: {X_train.shape[0]:,} samples ({X_train.shape[0]/len(X)*100:.1f}%)")
+print(
+    f"  Training set: {X_train.shape[0]:,} samples ({X_train.shape[0]/len(X)*100:.1f}%)"
+)
 print(f"  Test set: {X_test.shape[0]:,} samples ({X_test.shape[0]/len(X)*100:.1f}%)")
 
 print(f"\n[2.2] Class distribution in training set:")
@@ -290,7 +301,6 @@ for cls, count in zip(unique_train, counts_train):
 # ============================================================================
 # 3. FEATURE SCALING
 # ============================================================================
-
 
 
 print("\n[3.1] Applying StandardScaler...")
@@ -305,7 +315,6 @@ print(f"  Training std: {X_train_scaled.std():.4f}")
 # ============================================================================
 # 4. HANDLE CLASS IMBALANCE WITH SMOTE
 # ============================================================================
-
 
 
 print("\n[4.1] Applying SMOTE to training set...")
@@ -329,52 +338,53 @@ print(f"\n  ✓ Classes balanced from 1:{counts_before[0]/counts_before[1]:.1f} 
 # ============================================================================
 
 
-
 # Dictionary to store models and results
 models = {}
 results = {}
 
 # Define models
 baseline_models = {
-    'Logistic Regression': LogisticRegression(random_state=42, max_iter=1000),
-    'Decision Tree': DecisionTreeClassifier(random_state=42, max_depth=10),
-    'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42, 
-                                           max_depth=10, n_jobs=-1),
-    'Gradient Boosting': GradientBoostingClassifier(n_estimators=100, random_state=42,
-                                                     max_depth=5)
+    "Logistic Regression": LogisticRegression(random_state=42, max_iter=1000),
+    "Decision Tree": DecisionTreeClassifier(random_state=42, max_depth=10),
+    "Random Forest": RandomForestClassifier(
+        n_estimators=100, random_state=42, max_depth=10, n_jobs=-1
+    ),
+    "Gradient Boosting": GradientBoostingClassifier(
+        n_estimators=100, random_state=42, max_depth=5
+    ),
 }
 
 print("\n[5.1] Training baseline models...")
 
 for name, model in baseline_models.items():
     print(f"\n  Training {name}...")
-    
+
     # Train model
     model.fit(X_train_resampled, y_train_resampled)
-    
+
     # Make predictions
     y_pred = model.predict(X_test_scaled)
     y_pred_proba = model.predict_proba(X_test_scaled)[:, 1]
-    
+
     # Calculate metrics
     accuracy = accuracy_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred)
     recall = recall_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
     roc_auc = roc_auc_score(y_test, y_pred_proba)
-    
+
     # Store model and results
     models[name] = model
     results[name] = {
-        'accuracy': accuracy,
-        'precision': precision,
-        'recall': recall,
-        'f1_score': f1,
-        'roc_auc': roc_auc,
-        'y_pred': y_pred,
-        'y_pred_proba': y_pred_proba
+        "accuracy": accuracy,
+        "precision": precision,
+        "recall": recall,
+        "f1_score": f1,
+        "roc_auc": roc_auc,
+        "y_pred": y_pred,
+        "y_pred_proba": y_pred_proba,
     }
-    
+
     print(f"    Accuracy: {accuracy:.4f}")
     print(f"    Precision: {precision:.4f}")
     print(f"    Recall: {recall:.4f}")
@@ -387,64 +397,63 @@ for name, model in baseline_models.items():
 
 
 # Find best baseline model by F1-score
-best_baseline = max(results.items(), key=lambda x: x[1]['f1_score'])[0]
+best_baseline = max(results.items(), key=lambda x: x[1]["f1_score"])[0]
 print(f"\n[6.1] Best baseline model: {best_baseline}")
 print(f"  F1-Score: {results[best_baseline]['f1_score']:.4f}")
 
 # Tune Random Forest (assuming it's one of the best)
-if best_baseline == 'Random Forest' or True:  # Always tune RF for this example
+if best_baseline == "Random Forest" or True:  # Always tune RF for this example
     print("\n[6.2] Tuning Random Forest hyperparameters...")
-    
+
     param_grid = {
-        'n_estimators': [100, 200],
-        'max_depth': [10, 15, 20],
-        'min_samples_split': [2, 5],
-        'min_samples_leaf': [1, 2]
+        "n_estimators": [100, 200],
+        "max_depth": [10, 15, 20],
+        "min_samples_split": [2, 5],
+        "min_samples_leaf": [1, 2],
     }
-    
+
     rf = RandomForestClassifier(random_state=42, n_jobs=-1)
-    
+
     # Use StratifiedKFold for cross-validation
     cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
-    
+
     grid_search = GridSearchCV(
-        rf, param_grid, cv=cv, scoring='f1',
-        n_jobs=-1, verbose=1
+        rf, param_grid, cv=cv, scoring="f1", n_jobs=-1, verbose=1
     )
-    
+
     print("  Running grid search (this may take several minutes)...")
     grid_search.fit(X_train_resampled, y_train_resampled)
-    
+
     print(f"\n[6.3] Best parameters:")
     for param, value in grid_search.best_params_.items():
         print(f"  {param}: {value}")
-    
+
     # Evaluate tuned model
     best_model = grid_search.best_estimator_
     y_pred_tuned = best_model.predict(X_test_scaled)
     y_pred_proba_tuned = best_model.predict_proba(X_test_scaled)[:, 1]
-    
+
     # Calculate metrics
     tuned_results = {
-        'accuracy': accuracy_score(y_test, y_pred_tuned),
-        'precision': precision_score(y_test, y_pred_tuned),
-        'recall': recall_score(y_test, y_pred_tuned),
-        'f1_score': f1_score(y_test, y_pred_tuned),
-        'roc_auc': roc_auc_score(y_test, y_pred_proba_tuned),
-        'y_pred': y_pred_tuned,
-        'y_pred_proba': y_pred_proba_tuned
+        "accuracy": accuracy_score(y_test, y_pred_tuned),
+        "precision": precision_score(y_test, y_pred_tuned),
+        "recall": recall_score(y_test, y_pred_tuned),
+        "f1_score": f1_score(y_test, y_pred_tuned),
+        "roc_auc": roc_auc_score(y_test, y_pred_proba_tuned),
+        "y_pred": y_pred_tuned,
+        "y_pred_proba": y_pred_proba_tuned,
     }
-    
+
     print(f"\n[6.4] Tuned model performance:")
     print(f"  Accuracy: {tuned_results['accuracy']:.4f}")
     print(f"  Precision: {tuned_results['precision']:.4f}")
     print(f"  Recall: {tuned_results['recall']:.4f}")
     print(f"  F1-Score: {tuned_results['f1_score']:.4f}")
     print(f"  ROC-AUC: {tuned_results['roc_auc']:.4f}")
-    
+
     # Add tuned model to results
-    models['Random Forest (Tuned)'] = best_model
-    results['Random Forest (Tuned)'] = tuned_results
+    models["Random Forest (Tuned)"] = best_model
+    results["Random Forest (Tuned)"] = tuned_results
 
 # ============================================================================
 # 7. MODEL COMPARISON
@@ -452,27 +461,29 @@ if best_baseline == 'Random Forest' or True:  # Always tune RF for this example
 
 
 # Create comparison dataframe
-comparison_df = pd.DataFrame({
-    'Model': list(results.keys()),
-    'Accuracy': [r['accuracy'] for r in results.values()],
-    'Precision': [r['precision'] for r in results.values()],
-    'Recall': [r['recall'] for r in results.values()],
-    'F1-Score': [r['f1_score'] for r in results.values()],
-    'ROC-AUC': [r['roc_auc'] for r in results.values()]
-})
+comparison_df = pd.DataFrame(
+    {
+        "Model": list(results.keys()),
+        "Accuracy": [r["accuracy"] for r in results.values()],
+        "Precision": [r["precision"] for r in results.values()],
+        "Recall": [r["recall"] for r in results.values()],
+        "F1-Score": [r["f1_score"] for r in results.values()],
+        "ROC-AUC": [r["roc_auc"] for r in results.values()],
+    }
+)
 
-comparison_df = comparison_df.sort_values('F1-Score', ascending=False)
+comparison_df = comparison_df.sort_values("F1-Score", ascending=False)
 
 print("\n[7.1] Performance metrics for all models:")
 print(comparison_df.to_string(index=False))
 
 # Identify best model
-best_model_name = comparison_df.iloc[0]['Model']
+best_model_name = comparison_df.iloc[0]["Model"]
 print(f"\n[7.2] Best model: {best_model_name}")
 print(f"  F1-Score: {comparison_df.iloc[0]['F1-Score']:.4f}")
 
 # Save comparison
-comparison_df.to_csv('../reports/05_model_comparison.csv', index=False)
+comparison_df.to_csv("../reports/05_model_comparison.csv", index=False)
 print("\n✓ Model comparison saved as '05_model_comparison.csv'")
 
 # ============================================================================
@@ -480,17 +491,19 @@ print("\n✓ Model comparison saved as '05_model_comparison.csv'")
 # ============================================================================
 
 
-
 best_model = models[best_model_name]
 best_results = results[best_model_name]
 
 # Classification report
 print(f"\n[8.1] Classification Report for {best_model_name}:")
-print(classification_report(y_test, best_results['y_pred'], 
-                          target_names=['Not Readmitted', 'Readmitted']))
+print(
+    classification_report(
+        y_test, best_results["y_pred"], target_names=["Not Readmitted", "Readmitted"]
+    )
+)
 
 # Confusion matrix
-cm = confusion_matrix(y_test, best_results['y_pred'])
+cm = confusion_matrix(y_test, best_results["y_pred"])
 print(f"\n[8.2] Confusion Matrix:")
 print(f"                  Predicted")
 print(f"                  0       1")
@@ -502,99 +515,124 @@ print(f"         1     {cm[1,0]:6d}  {cm[1,1]:6d}")
 # ============================================================================
 
 
-
 print("\n[9.1] Generating performance visualizations...")
 
 fig = plt.figure(figsize=(20, 12))
 
 # Plot 1: Model Comparison Bar Chart
 ax1 = plt.subplot(2, 3, 1)
-metrics = ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'ROC-AUC']
+metrics = ["Accuracy", "Precision", "Recall", "F1-Score", "ROC-AUC"]
 x = np.arange(len(comparison_df))
 width = 0.15
 
 for i, metric in enumerate(metrics):
-    ax1.bar(x + i*width, comparison_df[metric], width, label=metric)
+    ax1.bar(x + i * width, comparison_df[metric], width, label=metric)
 
-ax1.set_xlabel('Models')
-ax1.set_ylabel('Score')
-ax1.set_title('Model Performance Comparison', fontweight='bold')
+ax1.set_xlabel("Models")
+ax1.set_ylabel("Score")
+ax1.set_title("Model Performance Comparison", fontweight="bold")
 ax1.set_xticks(x + width * 2)
-ax1.set_xticklabels(comparison_df['Model'], rotation=45, ha='right')
+ax1.set_xticklabels(comparison_df["Model"], rotation=45, ha="right")
 ax1.legend()
-ax1.grid(axis='y', alpha=0.3)
+ax1.grid(axis="y", alpha=0.3)
 
 # Plot 2: Confusion Matrix Heatmap
 ax2 = plt.subplot(2, 3, 2)
-sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax2,
-            xticklabels=['Not Readmit', 'Readmit'],
-            yticklabels=['Not Readmit', 'Readmit'])
-ax2.set_title(f'Confusion Matrix - {best_model_name}', fontweight='bold')
-ax2.set_ylabel('Actual')
-ax2.set_xlabel('Predicted')
+sns.heatmap(
+    cm,
+    annot=True,
+    fmt="d",
+    cmap="Blues",
+    ax=ax2,
+    xticklabels=["Not Readmit", "Readmit"],
+    yticklabels=["Not Readmit", "Readmit"],
+)
+ax2.set_title(f"Confusion Matrix - {best_model_name}", fontweight="bold")
+ax2.set_ylabel("Actual")
+ax2.set_xlabel("Predicted")
 
 # Plot 3: ROC Curves
 ax3 = plt.subplot(2, 3, 3)
 for name, result in results.items():
-    fpr, tpr, _ = roc_curve(y_test, result['y_pred_proba'])
+    fpr, tpr, _ = roc_curve(y_test, result["y_pred_proba"])
     ax3.plot(fpr, tpr, label=f"{name} (AUC={result['roc_auc']:.3f})")
 
-ax3.plot([0, 1], [0, 1], 'k--', label='Random Classifier')
-ax3.set_xlabel('False Positive Rate')
-ax3.set_ylabel('True Positive Rate')
-ax3.set_title('ROC Curves', fontweight='bold')
-ax3.legend(loc='lower right')
+ax3.plot([0, 1], [0, 1], "k--", label="Random Classifier")
+ax3.set_xlabel("False Positive Rate")
+ax3.set_ylabel("True Positive Rate")
+ax3.set_title("ROC Curves", fontweight="bold")
+ax3.legend(loc="lower right")
 ax3.grid(alpha=0.3)
 
 # Plot 4: Precision-Recall Curve
 ax4 = plt.subplot(2, 3, 4)
 precision_vals, recall_vals, _ = precision_recall_curve(
-    y_test, best_results['y_pred_proba']
+    y_test, best_results["y_pred_proba"]
 )
 ax4.plot(recall_vals, precision_vals, linewidth=2)
-ax4.set_xlabel('Recall')
-ax4.set_ylabel('Precision')
-ax4.set_title(f'Precision-Recall Curve - {best_model_name}', fontweight='bold')
+ax4.set_xlabel("Recall")
+ax4.set_ylabel("Precision")
+ax4.set_title(f"Precision-Recall Curve - {best_model_name}", fontweight="bold")
 ax4.grid(alpha=0.3)
 
 # Plot 5: Feature Importance (if available)
 ax5 = plt.subplot(2, 3, 5)
-if hasattr(best_model, 'feature_importances_'):
+if hasattr(best_model, "feature_importances_"):
     importances = best_model.feature_importances_
     indices = np.argsort(importances)[-15:]  # Top 15
-    
-    ax5.barh(range(len(indices)), importances[indices], color='steelblue')
+
+    ax5.barh(range(len(indices)), importances[indices], color="steelblue")
     ax5.set_yticks(range(len(indices)))
     ax5.set_yticklabels([X.columns[i] for i in indices])
-    ax5.set_xlabel('Feature Importance')
-    ax5.set_title('Top 15 Feature Importances', fontweight='bold')
+    ax5.set_xlabel("Feature Importance")
+    ax5.set_title("Top 15 Feature Importances", fontweight="bold")
 else:
-    ax5.text(0.5, 0.5, 'Feature importance\nnot available\nfor this model',
-            ha='center', va='center', fontsize=12)
+    ax5.text(
+        0.5,
+        0.5,
+        "Feature importance\nnot available\nfor this model",
+        ha="center",
+        va="center",
+        fontsize=12,
+    )
     ax5.set_xlim(0, 1)
     ax5.set_ylim(0, 1)
-    ax5.axis('off')
+    ax5.axis("off")
 
 # Plot 6: Metrics Comparison
 ax6 = plt.subplot(2, 3, 6)
-best_metrics = [best_results['accuracy'], best_results['precision'],
-                best_results['recall'], best_results['f1_score'], best_results['roc_auc']]
-metric_names = ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'ROC-AUC']
+best_metrics = [
+    best_results["accuracy"],
+    best_results["precision"],
+    best_results["recall"],
+    best_results["f1_score"],
+    best_results["roc_auc"],
+]
+metric_names = ["Accuracy", "Precision", "Recall", "F1-Score", "ROC-AUC"]
 
-bars = ax6.bar(metric_names, best_metrics, color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd'])
-ax6.set_ylabel('Score')
-ax6.set_title(f'{best_model_name} - Final Metrics', fontweight='bold')
+bars = ax6.bar(
+    metric_names,
+    best_metrics,
+    color=["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"],
+)
+ax6.set_ylabel("Score")
+ax6.set_title(f"{best_model_name} - Final Metrics", fontweight="bold")
 ax6.set_ylim(0, 1)
-ax6.grid(axis='y', alpha=0.3)
+ax6.grid(axis="y", alpha=0.3)
 
 # Add value labels on bars
 for bar, value in zip(bars, best_metrics):
     height = bar.get_height()
-    ax6.text(bar.get_x() + bar.get_width()/2., height,
-            f'{value:.3f}', ha='center', va='bottom')
+    ax6.text(
+        bar.get_x() + bar.get_width() / 2.0,
+        height,
+        f"{value:.3f}",
+        ha="center",
+        va="bottom",
+    )
 
 plt.tight_layout()
-plt.savefig('../figures/05_model_evaluation.png', dpi=300, bbox_inches='tight')
+plt.savefig("../figures/05_model_evaluation.png", dpi=300, bbox_inches="tight")
 print("  ✓ Saved: 05_model_evaluation.png")
 
 # ============================================================================
@@ -602,20 +640,18 @@ print("  ✓ Saved: 05_model_evaluation.png")
 # ============================================================================
 
 
-
-if hasattr(best_model, 'feature_importances_'):
+if hasattr(best_model, "feature_importances_"):
     print(f"\n[10.1] Top 20 most important features for {best_model_name}:")
-    
+
     importances = best_model.feature_importances_
-    feature_importance_df = pd.DataFrame({
-        'Feature': X.columns,
-        'Importance': importances
-    }).sort_values('Importance', ascending=False)
-    
+    feature_importance_df = pd.DataFrame(
+        {"Feature": X.columns, "Importance": importances}
+    ).sort_values("Importance", ascending=False)
+
     print(feature_importance_df.head(20).to_string(index=False))
-    
+
     # Save feature importance
-    feature_importance_df.to_csv('../reports/05_feature_importance.csv', index=False)
+    feature_importance_df.to_csv("../reports/05_feature_importance.csv", index=False)
     print("\n✓ Feature importance saved as '05_feature_importance.csv'")
 else:
     print(f"\n  Feature importance not available for {best_model_name}")
@@ -625,37 +661,36 @@ else:
 # ============================================================================
 
 
-
 # Save model
-with open('../models/05_best_model.pkl', 'wb') as f:
+with open("../models/05_best_model.pkl", "wb") as f:
     pickle.dump(best_model, f)
 print(f"\n✓ Model saved as '05_best_model.pkl'")
 
 # Save scaler
-with open('../models/05_scaler.pkl', 'wb') as f:
+with open("../models/05_scaler.pkl", "wb") as f:
     pickle.dump(scaler, f)
 print("✓ Scaler saved as '05_scaler.pkl'")
 
 # Save model metadata
 metadata = {
-    'model_name': best_model_name,
-    'model_type': type(best_model).__name__,
-    'n_features': X.shape[1],
-    'feature_names': X.columns.tolist(),
-    'performance': {
-        'accuracy': best_results['accuracy'],
-        'precision': best_results['precision'],
-        'recall': best_results['recall'],
-        'f1_score': best_results['f1_score'],
-        'roc_auc': best_results['roc_auc']
+    "model_name": best_model_name,
+    "model_type": type(best_model).__name__,
+    "n_features": X.shape[1],
+    "feature_names": X.columns.tolist(),
+    "performance": {
+        "accuracy": best_results["accuracy"],
+        "precision": best_results["precision"],
+        "recall": best_results["recall"],
+        "f1_score": best_results["f1_score"],
+        "roc_auc": best_results["roc_auc"],
     },
-    'training_samples': len(X_train_resampled),
-    'test_samples': len(X_test),
-    'class_balance_method': 'SMOTE'
+    "training_samples": len(X_train_resampled),
+    "test_samples": len(X_test),
+    "class_balance_method": "SMOTE",
 }
 
 
-with open('../models/05_model_metadata.json', 'w') as f:
+with open("../models/05_model_metadata.json", "w") as f:
     json.dump(metadata, f, indent=2)
 print("✓ Model metadata saved as '05_model_metadata.json'")
 
@@ -664,7 +699,8 @@ print("✓ Model metadata saved as '05_model_metadata.json'")
 # ============================================================================
 
 
-print(f"""
+print(
+    f"""
 ✓ Data Processing Complete:
   - Original dataset: 101,766 encounters
   - After preprocessing: 71,518 unique patients
@@ -687,11 +723,12 @@ print(f"""
   - Class imbalance addressed with SMOTE
   - Feature selection reduced noise and improved generalization
   - Model can identify high-risk patients for targeted intervention
-""")
+"""
+)
 
-print("\n" + "="*80)
+print("\n" + "=" * 80)
 print("STEP 5 COMPLETE!")
-print("="*80)
+print("=" * 80)
 print("\nGenerated Files:")
 print("  - 05_model_comparison.csv")
 print("  - 05_feature_importance.csv")
@@ -704,4 +741,4 @@ print("  1. Review model evaluation visualizations")
 print("  2. Analyze feature importance")
 print("  3. Prepare final presentation")
 print("  4. Document findings in final report")
-print("="*80)
+print("=" * 80)
