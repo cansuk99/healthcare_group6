@@ -1,8 +1,8 @@
 Metric,Value
-Original_Features,50.0
+Original_Features,58.0
 Interaction_Features,5.0
 Polynomial_Features,3.0
 Binary_Indicator_Features,5.0
-After_Encoding,26.0
-After_Selection,26.0
+After_Encoding,30.0
+After_Selection,30.0
 Reduction_Percentage,0.0
