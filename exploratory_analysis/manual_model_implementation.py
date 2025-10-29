@@ -79,7 +79,7 @@ def create_visualizations(y_test, y_pred, model_name, predict_fn_name, features_
 # We used the cleaned diabetes dataset and apply manual feature selection based on statistical significance and clinical reasoning.
 # This approach reflects a more explainable, research-driven logic, where features are included if they are **statistically significant predictors of readmission** and **clinically meaningful**.
 
-df = pd.read_csv('./data/processed/diabetes_cleaned_data.csv')
+df = pd.read_csv('../data/processed/diabetes_cleaned_data.csv')
 print(f"Loaded dataset shape: {df.shape}")
 
 # Feature Selection Logic
@@ -267,9 +267,9 @@ for features, features_selection_technique in zip([statistical_features, try2_fe
         y_pred_predict_fn = model.predict(X_test).astype(int)
 
         fig, axs = create_visualizations(y_test, y_pred, model_name, "predict_proba", features_selection_technique, results_df)
-        plt.savefig(f"figures/manual_features_selection_results/{model_name}_predict_proba_{features_selection_technique.replace(" ", "_")}.png")
+        plt.savefig(f"../figures/manual_features_selection_results/{model_name}_predict_proba_{features_selection_technique.replace(" ", "_")}.png")
         fig, axs = create_visualizations(y_test, y_pred_predict_fn, model_name, "predict", features_selection_technique, results_df)
-        plt.savefig(f"figures/manual_features_selection_results/{model_name}_{features_selection_technique.replace(" ", "_")}.png")
+        plt.savefig(f"../figures/manual_features_selection_results/{model_name}_{features_selection_technique.replace(" ", "_")}.png")
 
 # The baseline evaluation with manually selected features shows that the models perform poorly on the dataset. 
 # F1-scores are very low (<0.20), indicating that models struggle to correctly identify patients who are readmitted within 30 days.
