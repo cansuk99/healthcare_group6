@@ -1,0 +1,11 @@
+{
+    "architecture": "2-layer ANN (32 hidden neurons)",
+    "sampling": "50/50 undersampling",
+    "best_threshold": 0.55,
+    "metrics": {
+        "accuracy": 0.691,
+        "precision": 0.17,
+        "recall": 0.442,
+        "f1": 0.246
+    }
+}

@@ -19,10 +19,8 @@ import seaborn as sns
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.feature_selection import mutual_info_classif, SelectKBest, chi2, f_classif
 from sklearn.ensemble import RandomForestClassifier
+import re
 
-print("="*80)
-print("STEP 4: FEATURE ENGINEERING AND SELECTION")
-print("="*80)
 
 # ============================================================================
 # 1. LOAD CLEANED DATA
@@ -32,43 +30,26 @@ print("\n[1] Loading cleaned data...")
 try:
     df = pd.read_csv('../data/processed/diabetes_cleaned_data.csv')
     print(f"✓ Data loaded: {df.shape}")
+    ids_raw = pd.read_csv('../data/raw/IDS_mapping.csv', header=None, dtype=str, keep_default_na=False)
+    print(f"✓ IDs mapping loaded: {ids_raw.shape}")
 except FileNotFoundError:
     print("✗ Error: 'diabetes_cleaned_data.csv' not found.")
     print("  Please run Step 2 first.")
-    exit()
+    #exit()
 
-# Verify target exists
 if 'readmitted_binary' not in df.columns:
     print("✗ Error: Target variable 'readmitted_binary' not found.")
-    exit()
+   # exit()
 
-# Store original shape
-original_features = len(df.columns) - 1  # Exclude target
+original_features = len(df.columns) - 1
 
 # ============================================================================
 # 2. CREATE INTERACTION FEATURES
 # ============================================================================
 
-print("\n" + "="*80)
-print("[2] CREATING INTERACTION FEATURES")
-print("="*80)
+
 
 print("\n[2.1] Creating clinically meaningful interactions...")
-
-# Interaction 1: Medications × Time in Hospital
-if 'num_medications' in df.columns and 'time_in_hospital' in df.columns:
-    df['meds_per_day'] = df['num_medications'] / (df['time_in_hospital'] + 1)  # +1 to avoid division by zero
-    print("  ✓ Created: meds_per_day (medications per hospital day)")
-
-# Interaction 2: Procedures × Time in Hospital
-if 'num_procedures' in df.columns and 'time_in_hospital' in df.columns:
-    df['procedures_per_day'] = df['num_procedures'] / (df['time_in_hospital'] + 1)
-    print("  ✓ Created: procedures_per_day")
-
-# Interaction 3: Lab tests × Time in Hospital
-if 'num_lab_procedures' in df.columns and 'time_in_hospital' in df.columns:
-    df['labs_per_day'] = df['num_lab_procedures'] / (df['time_in_hospital'] + 1)
-    print("  ✓ Created: labs_per_day")
 
 # Interaction 4: Total prior visits
 prior_visit_cols = ['number_outpatient', 'number_emergency', 'number_inpatient']
@@ -90,9 +71,7 @@ print(f"\n  Total interaction features created: {len(interaction_features)}")
 # 3. CREATE POLYNOMIAL FEATURES
 # ============================================================================
 
-print("\n" + "="*80)
-print("[3] CREATING POLYNOMIAL FEATURES")
-print("="*80)
+
 
 print("\n[3.1] Creating squared terms for key continuous variables...")
 
@@ -109,23 +88,41 @@ for col in poly_candidates:
 
 print(f"\n  Total polynomial features created: {len(poly_features)}")
 
+# why we are adding squared features:
+# Linear regression assumes a straight-line relationship:
+# Y=β0​+β1​X+ε
+# real-world data (especially in healthcare) often show curved or non-linear patterns.
+#The length of hospital stay might increase health costs rapidly at first but then plateau.
+# - Number of medications might improve recovery up to a point, then cause side effects.
+# - A simple linear term (num_medications) cannot capture that curvature.
+
+# To model curvature, we include the square of x
+# Y=β0​+β1​X+β2​X^2+ε
+# This creates a quadratic relationship, allowing the regression line to bend.
+# If 𝛽2 is:
+# # - positive → the curve opens upward (U-shape)
+# # - negative → the curve opens downward (∩-shape)
+
+
+
 # ============================================================================
 # 4. CREATE BINARY INDICATOR FEATURES
 # ============================================================================
 
-print("\n" + "="*80)
-print("[4] CREATING BINARY INDICATOR FEATURES")
-print("="*80)
+
 
 print("\n[4.1] Creating binary flags for important conditions...")
+df.columns
 
 binary_features = []
 
+
 # Flag: HbA1c tested
 if 'A1Cresult' in df.columns:
-    df['A1C_tested'] = (df['A1Cresult'] != 'None').astype(int)
+    df['A1C_tested'] = (df['A1Cresult'] != 'NoTest').astype(int)
     binary_features.append('A1C_tested')
     print("  ✓ Created: A1C_tested")
+
 
 # Flag: Change in diabetes medication
 if 'change' in df.columns:
@@ -160,12 +157,72 @@ if 'number_diagnoses' in df.columns:
 print(f"\n  Total binary indicator features created: {len(binary_features)}")
 
 # ============================================================================
-# 5. ENCODE CATEGORICAL VARIABLES
+# 5. MAPPING VALUES
+# ---------------------------------------------------------------------------
+print("\n[5] Mapping ID values for admission_type and discharge_disposition")
+
+mapping_sections = {}
+current_feature = None
+
+for i in range(len(ids_raw)):
+    first_cell = ids_raw.iat[i, 0] if ids_raw.shape[1] > 0 else None
+    second_cell = ids_raw.iat[i, 1] if ids_raw.shape[1] > 1 else None
+
+    if first_cell is None or str(first_cell).strip() == '':
+        continue
+
+    first_cell_str = str(first_cell).strip()
+
+    if first_cell_str.endswith('_id'):
+        current_feature = first_cell_str
+        mapping_sections[current_feature] = {}
+        continue
+
+    if current_feature and second_cell is not None and str(second_cell).strip() != '':
+        mapping_sections[current_feature][first_cell_str] = str(second_cell).strip()
+
+for feature in mapping_sections.keys():
+    if feature in df.columns:
+        cat_col = f"{feature}_cat"
+
+        # Normalize the dataframe column values to stable strings
+        s_norm = df[feature].astype(str).str.strip()
+        s_norm = s_norm.str.replace(r"\.0$", '', regex=True)
+        s_norm = s_norm.replace({'nan': ''})
+
+        # Build a normalized mapping dict from the mapping_sections entry
+        raw_map = mapping_sections[feature]
+        norm_map = {}
+        for raw_key, raw_label in raw_map.items():
+            normalized_key = str(raw_key).strip()
+            normalized_key = re.sub(r"\.0$", '', normalized_key)
+            normalized_label = str(raw_label).strip()
+            _lab = normalized_label.lower()
+            if re.match(r"^(?:|nan|null|not available|not mapped|unknown(?:/invalid)?|invalid)$", _lab):
+                normalized_label = 'Missing'
+
+            norm_map[normalized_key] = normalized_label
+
+        # Apply mapping and mark unmapped (and blanks) as 'Missing'
+        df[cat_col] = s_norm.map(norm_map).fillna('Missing')
+
+        # Report how many values were not mapped (i.e., labeled 'Missing')
+        miss_mask = df[cat_col].str.lower() == 'missing'
+        miss_count = int(miss_mask.sum())
+        print(f"  - Created {cat_col}: {df[cat_col].nunique(dropna=True)} labels, Missing: {miss_count} ({miss_count/len(df)*100:.2f}%)")
+
+        # Show distinct raw values that resulted in 'Missing' so analysts can inspect
+        missing_raw_values = sorted(df.loc[miss_mask, feature].dropna().astype(str).unique())
+        if missing_raw_values:
+            print(f"    >> Unique raw values mapped to 'Missing' for {feature}: {missing_raw_values}")
+        else:
+            print(f"    >> No raw values mapped to 'Missing' for {feature}")
+
+# ============================================================================
+# 6. ENCODE CATEGORICAL VARIABLES
 # ============================================================================
 
-print("\n" + "="*80)
-print("[5] ENCODING CATEGORICAL VARIABLES")
-print("="*80)
+
 
 print("\n[5.1] One-hot encoding categorical features...")
 
@@ -182,12 +239,10 @@ print(f"  ✓ Encoded {len(categorical_to_encode)} categorical features")
 print(f"  ✓ Dataset shape after encoding: {df_encoded.shape}")
 
 # ============================================================================
-# 6. PREPARE FEATURE MATRIX
+# 7. PREPARE FEATURE MATRIX
 # ============================================================================
 
-print("\n" + "="*80)
-print("[6] PREPARING FEATURE MATRIX")
-print("="*80)
+
 
 # Separate features and target
 X = df_encoded.drop(['readmitted_binary'], axis=1)
@@ -206,12 +261,10 @@ print(f"  - Samples: {X.shape[0]}")
 print(f"  - Target distribution: {y.value_counts().to_dict()}")
 
 # ============================================================================
-# 7. FEATURE SELECTION - CORRELATION METHOD
+# 8. FEATURE SELECTION - CORRELATION METHOD
 # ============================================================================
 
-print("\n" + "="*80)
-print("[7] FEATURE SELECTION - CORRELATION METHOD")
-print("="*80)
+
 
 print("\n[7.1] Computing correlations with target...")
 
@@ -228,12 +281,10 @@ corr_selected = correlations[correlations > corr_threshold].index.tolist()
 print(f"\n  Features with |correlation| > {corr_threshold}: {len(corr_selected)}")
 
 # ============================================================================
-# 8. FEATURE SELECTION - MUTUAL INFORMATION
+# 9. FEATURE SELECTION - MUTUAL INFORMATION
 # ============================================================================
 
-print("\n" + "="*80)
-print("[8] FEATURE SELECTION - MUTUAL INFORMATION")
-print("="*80)
+
 
 print("\n[8.1] Computing mutual information scores...")
 
@@ -250,12 +301,10 @@ mi_selected = mi_scores.head(50).index.tolist()
 print(f"\n  Selected top 50 features by mutual information")
 
 # ============================================================================
-# 9. FEATURE SELECTION - RANDOM FOREST IMPORTANCE
+# 10. FEATURE SELECTION - RANDOM FOREST IMPORTANCE
 # ============================================================================
 
-print("\n" + "="*80)
-print("[9] FEATURE SELECTION - RANDOM FOREST IMPORTANCE")
-print("="*80)
+
 
 print("\n[9.1] Training Random Forest for feature importance...")
 
@@ -276,12 +325,10 @@ rf_selected = importances[importances > importance_threshold].index.tolist()
 print(f"\n  Features with importance > {importance_threshold}: {len(rf_selected)}")
 
 # ============================================================================
-# 10. COMBINE SELECTION METHODS
+# 11. COMBINE SELECTION METHODS
 # ============================================================================
 
-print("\n" + "="*80)
-print("[10] COMBINING FEATURE SELECTION METHODS")
-print("="*80)
+
 
 print("\n[10.1] Finding consensus features...")
 
@@ -308,12 +355,10 @@ final_features = list(feature_votes.keys())
 print(f"\n[10.2] Final feature set: {len(final_features)} features")
 
 # ============================================================================
-# 11. CREATE FINAL DATASETS
+# 12. CREATE FINAL DATASETS
 # ============================================================================
 
-print("\n" + "="*80)
-print("[11] CREATING FINAL DATASETS")
-print("="*80)
+
 
 # Create final feature matrix
 X_final = X[final_features].copy()
@@ -340,12 +385,10 @@ print("✓ Feature matrix saved as '04_X_features.csv'")
 print("✓ Target variable saved as '04_y_target.csv'")
 
 # ============================================================================
-# 12. FEATURE ENGINEERING SUMMARY
+# 13. FEATURE ENGINEERING SUMMARY
 # ============================================================================
 
-print("\n" + "="*80)
-print("[12] FEATURE ENGINEERING SUMMARY")
-print("="*80)
+
 
 summary = {
     'Original_Features': original_features,

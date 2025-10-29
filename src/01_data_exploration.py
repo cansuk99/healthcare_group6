@@ -20,14 +20,14 @@ pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', 100)
 sns.set_style("whitegrid")
 
-print("="*80)
-print("DIABETES HOSPITAL READMISSION - DATA ACQUISITION & EXPLORATION")
-print("="*80)
 
-# === STEP 1: Load dataset ===
+
+# ============================================================================
+# 2. Load Dataset
+# ============================================================================
 
 try:
-    diabetes_data = pd.read_csv('../data/raw/diabetic_data.csv')
+    diabetes_data = pd.read_csv('../data/raw/diabetes_data.csv')
     
     # Use the DataFrame directly
     df = diabetes_data
@@ -36,12 +36,9 @@ try:
     print(f"  - Shape: {df.shape}")
     print(f"  - Features: {df.shape[1]}")
     print(f"  - Records: {len(df)}")
-    
+
 except Exception as e:
     print(f"✗ Error loading dataset: {e}")
-    print("\nNote: Make sure you have installed ucimlrepo:")
-    print("  pip install ucimlrepo")
-    exit()
 
 # Create folders if they don't exist
 os.makedirs('../reports', exist_ok=True)
@@ -51,9 +48,7 @@ os.makedirs('../figures', exist_ok=True)
 # 2. INITIAL DATA INSPECTION
 # ============================================================================
 
-print("\n" + "="*80)
-print("[2] INITIAL DATA INSPECTION")
-print("="*80)
+
 
 # Display first few rows
 print("\n[2.1] First 5 rows:")
@@ -80,9 +75,7 @@ for col in categorical_cols[:10]:  # Show first 10 categorical columns
 # 3. TARGET VARIABLE ANALYSIS
 # ============================================================================
 
-print("\n" + "="*80)
-print("[3] TARGET VARIABLE ANALYSIS")
-print("="*80)
+
 
 if 'readmitted' in df.columns:
     print("\n[3.1] Readmission Distribution:")
@@ -118,9 +111,7 @@ if 'readmitted' in df.columns:
 # 4. MISSING VALUES ANALYSIS
 # ============================================================================
 
-print("\n" + "="*80)
-print("[4] MISSING VALUES ANALYSIS")
-print("="*80)
+
 
 # Calculate missing values
 missing_counts = df.isnull().sum()
@@ -165,9 +156,7 @@ else:
 # ============================================================================
 # 5. DIAGNOSIS CODES ANALYSIS
 # ============================================================================
-print("\n" + "="*80)
-print("[5] DIAGNOSIS CODES ANALYSIS")
-print("="*80)
+
 
 diag_cols = ['diag_1', 'diag_2', 'diag_3']
 for col in diag_cols:
@@ -186,9 +175,7 @@ print("  Mapping based on: Strack et al. (2014), Table 2")
 # 6. DUPLICATE PATIENT ANALYSIS
 # ============================================================================
 
-print("\n" + "="*80)
-print("[6] DUPLICATE PATIENT ANALYSIS")
-print("="*80)
+
 
 if 'patient_nbr' in df.columns:
     unique_patients = df['patient_nbr'].nunique()
@@ -216,9 +203,6 @@ if 'patient_nbr' in df.columns:
 # 7. BASIC VISUALIZATIONS
 # ============================================================================
 
-print("\n" + "="*80)
-print("[7] GENERATING VISUALIZATIONS")
-print("="*80)
 
 # Create figure with subplots
 fig, axes = plt.subplots(2, 2, figsize=(15, 12))
