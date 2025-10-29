@@ -17,45 +17,22 @@ To run the scripts in this repository, install all required Python packages with
 pip install requirements.txt
 ```
 
-├── .gitignore                   # Git ignore rules
-├── requirements.txt             # Python dependencies
-├── readme.md                    # Project documentation
+**data/** → all raw, processed, and analytical datasets
 
-├── data/
-│   ├── preprocessing-codes-mapping/   # Codebooks and preprocessing mappings
-│   ├── processed/                     # Cleaned and transformed datasets
-│   ├── raw/                           # Original raw data
-│   ├── selected-features/             # Subsets of features after selection
-│   ├── exploratory_analysis/          # EDA outputs and summaries
-│   ├── figures/                       # Generated plots and figures
-│   ├── models/                        # Saved ML models
-│   └── reports/                       # Evaluation reports and logs
+**src/** → main analysis pipeline for EDA, cleaning, and modeling
 
-├── ann/                               # Model training scripts
-│   ├── step_1_data_cleaning.py
-│   ├── step_2_feature_selection.py
-│   ├── step_3_models.py
-│   ├── step_4_ANN.py
-│   ├── step_5_Logistic_Regression.py
-│   └── step_6_Random_forest.py
+**ann/** → ANN model. Model is using **all features**
 
-└── src/                               # Core analysis pipeline
-    ├── 01_data_exploration.py
-    ├── 02_data_cleaning.py
-    ├── 03_data_analysis.py
-    ├── 04_feature_selection.py
-    └── 05_models.py
+**reports/** → stores model outputs, metrics, and visual summaries
+
+**exploratory analysis/** → ipynb and py files for exploration
+    ` feature-selection-interaction.ipynb ` - Logisitc Regression for finding statistically sigfnificant interaction features (mentioned in presentation)
+    ` manual_model_implementation.py ` -- 3 Models with **manually selected features** based on feature-selection-interaction.ipynb (mentioned in presentation)
 
 
-data/ → all raw, processed, and analytical datasets
-
-src/ → main analysis pipeline for EDA, cleaning, and modeling
-
-ann/ → ANN model 
-
-reports/ → stores model outputs, metrics, and visual summaries
-
-exploratory analysis/ → ipynb and py files for exploration
-
-requirements.txt → dependencies
-
+- Pipeline stages in src folder **(Automated feature selection)**:
+  - Step 1: Data acquisition & initial exploration (src/01_data_exploration.py)
+  - Step 2: Cleaning, ICD‑9 mapping, feature engineering (src/02_data_cleaning.py)
+  - Step 3: Exploratory data analysis (src/03_data_analysis.py)
+  - Step 4: Feature engineering & selection (src/04_feature_selection.py)
+  - Step 5: Model training, evaluation, and export (src/05_models.py)
