@@ -14,7 +14,7 @@ To run the scripts in this repository, install all required Python packages with
 
 ###
 ```bash
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 
 **data/** → all raw, processed, and analytical datasets
