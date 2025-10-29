@@ -21,6 +21,13 @@ pip install requirements.txt
 
 **src/** → main analysis pipeline for EDA, cleaning, and modeling
 
+- Pipeline stages in src folder **(Automated feature selection)**:
+  - Step 1: Data acquisition & initial exploration (src/01_data_exploration.py)
+  - Step 2: Cleaning, ICD‑9 mapping, feature engineering (src/02_data_cleaning.py)
+  - Step 3: Exploratory data analysis (src/03_data_analysis.py)
+  - Step 4: Feature engineering & selection (src/04_feature_selection.py)
+  - Step 5: Model training, evaluation, and export (src/05_models.py)
+
 **ann/** → ANN model. Model is using **all features**
 
 **reports/** → stores model outputs, metrics, and visual summaries
@@ -33,10 +40,3 @@ pip install requirements.txt
   -  ` multi-encounters.ipynb ` -- multi encounters exploration
   -  ` feature-selection-uni-and-multivariate.ipynb` -- univariate & multivariable GLM statistical analysis, provides p-values for features
 
-
-- Pipeline stages in src folder **(Automated feature selection)**:
-  - Step 1: Data acquisition & initial exploration (src/01_data_exploration.py)
-  - Step 2: Cleaning, ICD‑9 mapping, feature engineering (src/02_data_cleaning.py)
-  - Step 3: Exploratory data analysis (src/03_data_analysis.py)
-  - Step 4: Feature engineering & selection (src/04_feature_selection.py)
-  - Step 5: Model training, evaluation, and export (src/05_models.py)
