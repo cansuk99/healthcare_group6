@@ -79,7 +79,7 @@ def create_visualizations(y_test, y_pred, model_name, predict_fn_name, features_
 # We used the cleaned diabetes dataset and apply manual feature selection based on statistical significance and clinical reasoning.
 # This approach reflects a more explainable, research-driven logic, where features are included if they are **statistically significant predictors of readmission** and **clinically meaningful**.
 
-df = pd.read_csv('./data/processed/diabetes_cleaned_data.csv')
+df = pd.read_csv('../data/processed/diabetes_cleaned_data.csv')
 print(f"Loaded dataset shape: {df.shape}")
 
 # Feature Selection Logic
